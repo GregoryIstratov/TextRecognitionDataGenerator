@@ -3,12 +3,24 @@ Utility functions
 """
 
 import os
+import random
 import re
 import unicodedata
 from typing import List, Tuple
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+
+def random_upper(s: str):
+    p = random.random()
+    if p <= 0.4:
+        p2 = random.random()
+        if p2 <= 0.6:
+            return s.upper()
+        
+        return s[0].upper() + s[1:]
+    return s
 
 
 def load_dict(path: str) -> List[str]:
@@ -21,7 +33,12 @@ def load_dict(path: str) -> List[str]:
         encoding="utf8",
         errors="ignore",
     ) as d:
-        word_dict = [l for l in d.read().splitlines() if len(l) > 0]
+        # word_dict = [l for l in d.read().splitlines() if len(l) > 0]
+        word_dict = []
+        for l in d.read().splitlines():
+            if len(l) <= 0:
+                continue
+            word_dict.append(random_upper(l))
 
     return word_dict
 
@@ -31,9 +48,11 @@ def load_fonts(lang: str) -> List[str]:
 
     if lang in os.listdir(os.path.join(os.path.dirname(__file__), "fonts")):
         return [
-            os.path.join(os.path.dirname(__file__), "fonts/{}".format(lang), font)
+            os.path.join(os.path.dirname(__file__),
+                         "fonts/{}".format(lang), font)
             for font in os.listdir(
-                os.path.join(os.path.dirname(__file__), "fonts/{}".format(lang))
+                os.path.join(os.path.dirname(__file__),
+                             "fonts/{}".format(lang))
             )
         ]
     else:
@@ -56,7 +75,8 @@ def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
     space_thresh = 1
     while True:
         try:
-            color_tuple = ((i + 1) // (255 * 255), (i + 1) // 255, (i + 1) % 255)
+            color_tuple = ((i + 1) // (255 * 255),
+                           (i + 1) // 255, (i + 1) % 255)
             letter = np.where(np.all(mask_arr == color_tuple, axis=-1))
             if space_thresh == 0 and letter:
                 x1 = min(bboxes[-1][2] + 1, np.min(letter[1]) - 1)
@@ -64,7 +84,8 @@ def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
                     min(bboxes[-1][3] + 1, np.min(letter[0]) - 1)
                     if not tess
                     else min(
-                        mask_arr.shape[0] - np.min(letter[0]) + 2, bboxes[-1][1] - 1
+                        mask_arr.shape[0] -
+                        np.min(letter[0]) + 2, bboxes[-1][1] - 1
                     )
                 )
                 x2 = max(bboxes[-1][2] + 1, np.min(letter[1]) - 2)
@@ -72,7 +93,8 @@ def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
                     max(bboxes[-1][3] + 1, np.min(letter[0]) - 2)
                     if not tess
                     else max(
-                        mask_arr.shape[0] - np.min(letter[0]) + 2, bboxes[-1][1] - 1
+                        mask_arr.shape[0] -
+                        np.min(letter[0]) + 2, bboxes[-1][1] - 1
                     )
                 )
                 bboxes.append((x1, y1, x2, y2))
@@ -87,7 +109,8 @@ def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
                     min(mask_arr.shape[0] - 1, np.max(letter[0]) + 1)
                     if not tess
                     else min(
-                        mask_arr.shape[0] - 1, mask_arr.shape[0] - np.min(letter[0]) + 1
+                        mask_arr.shape[0] - 1, mask_arr.shape[0] -
+                        np.min(letter[0]) + 1
                     ),
                 )
             )

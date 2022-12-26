@@ -82,7 +82,14 @@ class FakeTextDataGenerator(object):
                 stroke_width,
                 stroke_fill,
             )
-        random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
+        if len(text) > 50:
+            skewing_angle = 0
+            random_angle = 0
+            random_skew = False
+        elif len(text) > 30:
+            random_angle = rnd.randint(-2, 2)
+        else:
+            random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
 
         rotated_img = image.rotate(
             skewing_angle if not random_skew else random_angle, expand=1
@@ -158,22 +165,32 @@ class FakeTextDataGenerator(object):
         #############################
         # Generate background image #
         #############################
-        if background_type == 0:
-            background_img = background_generator.gaussian_noise(
-                background_height, background_width
-            )
-        elif background_type == 1:
-            background_img = background_generator.plain_white(
-                background_height, background_width
-            )
-        elif background_type == 2:
-            background_img = background_generator.quasicrystal(
-                background_height, background_width
-            )
-        else:
-            background_img = background_generator.image(
-                background_height, background_width, image_dir
-            )
+        def generate_backgound(type):
+            if type == 0:
+                return background_generator.gaussian_noise(
+                    background_height, background_width
+                )
+            elif type == 1:
+                return background_generator.plain_white(
+                    background_height, background_width
+                )
+            elif type == 2:
+                return background_generator.quasicrystal(
+                    background_height, background_width
+                )
+            elif type == 3:
+                return background_generator.image(
+                    background_height, background_width, image_dir
+                )                
+            elif type == 4:
+                c = rnd.choices(population=[0,1,2,3], weights=[0.3, 0.1, 0.3, 0.3], k=1)[0]
+                return generate_backgound(c)
+            else:
+                raise RuntimeError("Unknown background type")
+
+
+        background_img = generate_backgound(background_type)
+
         background_mask = Image.new(
             "RGB", (background_width, background_height), (0, 0, 0)
         )
