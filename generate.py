@@ -63,6 +63,7 @@ if create_dataset:
     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     csv_writer.writerow(["filename", "words"])
 
+widths = []
 for i in range(1000):
 
     c = i % 3
@@ -76,7 +77,11 @@ for i in range(1000):
 
     # Do something with the pillow images here.
     print(f"[{i}] Text: {lbl}")
-    #print(f"Image size: {np.asarray(img).shape}")
+    print(f"Image size: {np.asarray(img).shape}")
+    widths.append(np.asarray(img).shape[1])
+    
+    print(f"Avg. width: {np.average(widths)}")
+    
     if create_dataset:
         fname = f"{i}.png"
         fpath = dataset_root / fname
