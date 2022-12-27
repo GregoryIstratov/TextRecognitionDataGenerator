@@ -24,25 +24,25 @@ def union_fonts(a: list, b: list):
 
 fonts_all = union_fonts(fonts_ru, fonts_en)
 
-generator_sym = GeneratorFromRandom(count=-1, length=5, allow_variable=True, fonts=fonts_ru, language="ru",
+generator_sym = GeneratorFromRandom(count=-1, length=3, allow_variable=True, fonts=fonts_ru, language="ru",
                                     use_letters=True,
-                                    size=64, random_blur=True, blur=2, skewing_angle=4, random_skew=True, background_type=4,
-                                    image_dir='/home/greg/PycharmProjects/TextRecognitionDataGenerator/trdg/images'
+                                    size=64, random_blur=True, blur=3, skewing_angle=4, random_skew=True, background_type=4,
+                                    image_dir='trdg/images'
                                     )
 
 def create_dict_generator(lang, fonts):
-    return GeneratorFromDict(count=1000, fonts=fonts, length=5, language=lang, 
-                                random_blur=True, blur=2, allow_variable=True,
+    return GeneratorFromDict(count=1000, fonts=fonts, length=3, language=lang, 
+                                random_blur=True, blur=3, allow_variable=True,
                                 skewing_angle=4,
                                 random_skew=True,
                                 background_type=4,
-                                image_dir='/home/greg/PycharmProjects/TextRecognitionDataGenerator/trdg/images',
+                                image_dir='trdg/images',
                                 size=64
                                 )
 
 def create_wiki_generator(lang, fonts):
     return GeneratorFromWikipedia(count=-1, fonts=fonts, language=lang, 
-                                random_blur=True, blur=2,
+                                random_blur=True, blur=3,
                                 skewing_angle=4,
                                 random_skew=True,
                                 background_type=4,

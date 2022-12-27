@@ -113,10 +113,10 @@ def create_strings_randomly(
             )  # unicode range for common and uncommon kanji
             # https://stackoverflow.com/questions/19899554/unicode-range-for-japanese
         elif lang == "ru":
-            pool += "ёйцукенгшщзхъфывапролджэячсмитьбю"
+            #pool += "ёйцукенгшщзхъфывапролджэячсмитьбю"
             pool += "ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ"
         else:
-            pool += string.ascii_letters
+            pool += string.ascii_uppercase
     if num:
         pool += "0123456789"
     if sym:
