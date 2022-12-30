@@ -109,17 +109,21 @@ class Generator:
                                     size=height
                                     )       
     def __next__(self):
-        c = self.index % len(self.gens)
-        self.index = self.index + 1
-        img, lbl = next(self.gens[c])
-        
-        if not self.rgb:
-            img = img.convert('L')
-            
-        if not self.sensitive:
-            lbl = lbl.upper()
-        
-        return img, lbl
+        while True:
+            try:
+                c = self.index % len(self.gens)
+                self.index = self.index + 1
+                img, lbl = next(self.gens[c])
+                
+                if not self.rgb:
+                    img = img.convert('L')
+                    
+                if not self.sensitive:
+                    lbl = lbl.upper()
+                
+                return img, lbl
+            except Exception as e:
+                print(f"[TextGenerator] Failed to get new sample: {str(e)}")
 
 
 if __name__ == "__main__":
