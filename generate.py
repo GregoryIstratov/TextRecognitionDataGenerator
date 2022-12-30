@@ -125,7 +125,7 @@ class Generator:
 if __name__ == "__main__":
     gen = Generator()
     
-    create_dataset = True
+    create_dataset = False
 
     dataset_root = Path("~/text_dataset_100k_new")
     dataset_root.mkdir(exist_ok=True, parents=True)
