@@ -4,7 +4,8 @@ import random as rnd
 from PIL import Image, ImageFilter, ImageStat
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
-from trdg.utils import mask_to_bboxes, make_filename_valid
+from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise
+from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD
 
 try:
     from trdg import handwritten_text_generator
@@ -84,7 +85,7 @@ class FakeTextDataGenerator(object):
             )
         if len(text) > 50:
             random_angle = rnd.randint(0 - skewing_angle // 3, skewing_angle // 3)
-        elif len(text) > 38:
+        elif len(text) > 32:
             random_angle = rnd.randint(0 - skewing_angle // 2, skewing_angle // 2)
         else:
             random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
@@ -162,35 +163,62 @@ class FakeTextDataGenerator(object):
             background_height = new_height + vertical_margin
         else:
             raise ValueError("Invalid orientation")
+        
+        
+        apply_text_noise = rnd.choice([True, False])
+        
+        ################################
+        # Apply noise over text image  #
+        ################################
+        
+        if apply_text_noise:
+            c = rnd.randint(0, 1)
+            match c:
+                case 0:
+                    resized_img = add_image_noise(resized_img)
+                case 1:
+                    gaussian_filter = ImageFilter.GaussianBlur(
+                        radius=blur if not random_blur else rnd.random() * blur
+                    )
+                    resized_img = resized_img.filter(gaussian_filter)
 
         #############################
         # Generate background image #
         #############################
-        def generate_backgound(type):
-            if type == 0:
-                return background_generator.gaussian_noise(
-                    background_height, background_width
-                )
-            elif type == 1:
-                return background_generator.plain_white(
-                    background_height, background_width
-                )
-            elif type == 2:
-                return background_generator.quasicrystal(
-                    background_height, background_width
-                )
-            elif type == 3:
-                return background_generator.image(
-                    background_height, background_width, image_dir
-                )                
-            elif type == 4:
-                c = rnd.choices(population=[0,1,2], weights=[0.33, 0.33, 0.33], k=1)[0]
-                return generate_backgound(c)
-            else:
-                raise RuntimeError("Unknown background type")
+        def generate_backgound():
+            #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
+            c = rnd.randint(0, 6)
+            match c:
+                case 0:
+                    return background_generator.gaussian_noise(
+                        background_height, background_width
+                    )
+                case 1:
+                    return background_generator.plain_white(
+                        background_height, background_width
+                    )
+                case 2:
+                    return background_generator.quasicrystal(
+                        background_height, background_width
+                    )
+                case 3:
+                    return background_generator.quasicrystal(
+                        background_height, background_width
+                    )                    
+                    # return background_generator.image(
+                    #     background_height, background_width, image_dir
+                    # )
+                case 4:
+                    return background_generator.my_noise(background_height, background_width, MyNoise_CLUSTER(12))
+                case 5:
+                    return background_generator.my_noise(background_height, background_width, MyNoise_INTER(12))
+                case 6:
+                    return background_generator.my_noise(background_height, background_width, MyNoise_CLOUD(8, 8))
+                case _:
+                    raise RuntimeError("Unknown background type")
 
 
-        background_img = generate_backgound(background_type)
+        background_img = generate_backgound()
 
         background_mask = Image.new(
             "RGB", (background_width, background_height), (0, 0, 0)
@@ -257,11 +285,15 @@ class FakeTextDataGenerator(object):
         # Apply gaussian blur #
         #######################
 
-        gaussian_filter = ImageFilter.GaussianBlur(
-            radius=blur if not random_blur else rnd.random() * blur
-        )
-        final_image = background_img.filter(gaussian_filter)
-        final_mask = background_mask.filter(gaussian_filter)
+        if not apply_text_noise:
+            gaussian_filter = ImageFilter.GaussianBlur(
+                radius=blur if not random_blur else rnd.random() * blur
+            )
+            final_image = background_img.filter(gaussian_filter)
+            final_mask = background_mask.filter(gaussian_filter)
+        else:
+            final_image = background_img
+            final_mask = background_mask
 
         #####################################
         # Generate name for resulting image #
