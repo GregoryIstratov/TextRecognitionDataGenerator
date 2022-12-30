@@ -36,7 +36,6 @@ MyNoise_BASIC = MyNoise_INTER | MyNoise_CLUSTER
 MyNoiseType = MyNoise_BASIC | MyNoise_CLOUD
 
 def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
-    print("My noise")
     
     def __create_noise(size, inter):
         noise = np.ones((height//size, width//size), dtype=np.float32)
@@ -69,7 +68,6 @@ def gaussian_noise(height: int, width: int) -> Image:
     Create a background with Gaussian noise (to mimic paper)
     """
 
-    print("Gauss noise")
     # We create an all white image
     image = np.ones((height, width))
 
