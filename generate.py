@@ -121,6 +121,10 @@ class Generator:
                 c = self.index % len(self.gens)
                 self.index = self.index + 1
                 img, lbl = next(self.gens[c])
+                
+                if img is None:
+                    print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
+                    continue
                     
                 if not self.sensitive:
                     lbl = lbl.upper()
