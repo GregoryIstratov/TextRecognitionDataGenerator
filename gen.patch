@@ -1,0 +1,75 @@
+diff --git a/generate.py b/generate.py
+index de35a34..ea86f9f 100644
+--- a/generate.py
++++ b/generate.py
+@@ -24,19 +24,19 @@ def union_fonts(a: list, b: list):
+ 
+ fonts_all = union_fonts(fonts_ru, fonts_en)
+ 
+-generator_sym = GeneratorFromRandom(count=-1, length=5, allow_variable=True, fonts=fonts_ru, language="ru",
++generator_sym = GeneratorFromRandom(count=-1, length=3, allow_variable=True, fonts=fonts_ru, language="ru",
+                                     use_letters=True,
+                                     size=64, random_blur=True, blur=2, skewing_angle=4, random_skew=True, background_type=4,
+-                                    image_dir='/home/greg/PycharmProjects/TextRecognitionDataGenerator/trdg/images'
++                                    image_dir='trdg/images'
+                                     )
+ 
+ def create_dict_generator(lang, fonts):
+-    return GeneratorFromDict(count=1000, fonts=fonts, length=5, language=lang, 
++    return GeneratorFromDict(count=50000, fonts=fonts, length=3, language=lang, 
+                                 random_blur=True, blur=2, allow_variable=True,
+                                 skewing_angle=4,
+                                 random_skew=True,
+                                 background_type=4,
+-                                image_dir='/home/greg/PycharmProjects/TextRecognitionDataGenerator/trdg/images',
++                                image_dir='trdg/images',
+                                 size=64
+                                 )
+ 
+@@ -46,7 +46,7 @@ def create_wiki_generator(lang, fonts):
+                                 skewing_angle=4,
+                                 random_skew=True,
+                                 background_type=4,
+-                                image_dir='/home/greg/PycharmProjects/TextRecognitionDataGenerator/trdg/images',
++                                image_dir='trdg/images',
+                                 size=64
+                                 )
+ 
+@@ -55,7 +55,7 @@ generator_en = create_dict_generator(lang='en', fonts=fonts_all)
+ 
+ create_dataset = True
+ 
+-dataset_root = Path("./dataset")
++dataset_root = Path("/home/greg/text_dataset2")
+ dataset_root.mkdir(exist_ok=True, parents=True)
+ 
+ if create_dataset:
+@@ -63,7 +63,7 @@ if create_dataset:
+     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+     csv_writer.writerow(["filename", "words"])
+ 
+-for i in range(1000):
++for i in range(20000):
+ 
+     c = i % 3
+     #c = 1
+@@ -90,4 +90,4 @@ if create_dataset:
+     csv_writer = None
+     csv_file.close()
+     
+-print("End")
+\ No newline at end of file
++print("End")
+diff --git a/trdg/string_generator.py b/trdg/string_generator.py
+index 3cfc2d0..f549197 100644
+--- a/trdg/string_generator.py
++++ b/trdg/string_generator.py
+@@ -113,7 +113,7 @@ def create_strings_randomly(
+             )  # unicode range for common and uncommon kanji
+             # https://stackoverflow.com/questions/19899554/unicode-range-for-japanese
+         elif lang == "ru":
+-            pool += "ёйцукенгшщзхъфывапролджэячсмитьбю"
++            #pool += "ёйцукенгшщзхъфывапролджэячсмитьбю"
+             pool += "ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ"
+         else:
+             pool += string.ascii_letters

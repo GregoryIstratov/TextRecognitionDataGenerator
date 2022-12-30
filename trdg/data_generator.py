@@ -102,6 +102,9 @@ class FakeTextDataGenerator(object):
         #############################
         # Apply distorsion to image #
         #############################
+        if distorsion_type > 0:
+            distorsion_type = rnd.randint(0, 2)
+        
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
             distorted_mask = rotated_mask
@@ -183,7 +186,7 @@ class FakeTextDataGenerator(object):
                     background_height, background_width, image_dir
                 )                
             elif type == 4:
-                c = rnd.choices(population=[0,1,2,3], weights=[0.3, 0.1, 0.3, 0.3], k=1)[0]
+                c = rnd.choices(population=[0,1,2], weights=[0.33, 0.33, 0.33], k=1)[0]
                 return generate_backgound(c)
             else:
                 raise RuntimeError("Unknown background type")
