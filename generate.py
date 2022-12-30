@@ -62,15 +62,24 @@ def random_numeric_string_gen():
      
 
 class Generator:
-    grayscale = True
-    NUM = -1
-    height = 128
-    index = 0
-    blur = 4
-    skew_angle = 10
-    length = 4
+    grayscale: bool = True
+    NUM: int = -1
+    height: int
+    index: int = 0 
+    blur: int
+    skew_angle: int
+    length: int
+    rgb: bool
+    sensitive: bool
 
-    def __init__(self) -> None:
+    def __init__(self, height: int = 64, blur: int = 3, skew_angle: int = 4, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+        self.height = height
+        self.blur = blur
+        self.skew_angle = skew_angle
+        self.length = length
+        self.rgb = rgb
+        self.sensitive = sensitive
+        
         self.fonts_ru = load_fonts('ru')
         self.fonts_en = load_fonts('en')
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
@@ -90,7 +99,7 @@ class Generator:
         self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
         pass
         
-    def __create_dict_generator(self, lang, height, fonts):
+    def __create_dict_generator(self, lang: str, height: int, fonts: list[str]):
         return GeneratorFromDict(count=-1, fonts=fonts, length=self.length, language=lang, 
                                     random_blur=True, blur=self.blur, allow_variable=True,
                                     skewing_angle=self.skew_angle,
@@ -103,6 +112,13 @@ class Generator:
         c = self.index % len(self.gens)
         self.index = self.index + 1
         img, lbl = next(self.gens[c])
+        
+        if not self.rgb:
+            img = img.convert('L')
+            
+        if not self.sensitive:
+            lbl = lbl.upper()
+        
         return img, lbl
 
 

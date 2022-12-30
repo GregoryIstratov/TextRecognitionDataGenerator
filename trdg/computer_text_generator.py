@@ -84,7 +84,7 @@ def _generate_horizontal_text(
     stroke_fill: str = "#282828",
 ) -> Tuple:
 
-    print(f"Font: {font} size {font_size}")
+    #print(f"Font: {font} size {font_size}")
     
     image_font = ImageFont.truetype(font=font, size=font_size)
 
