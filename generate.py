@@ -108,10 +108,33 @@ class Generator:
 
 if __name__ == "__main__":
     gen = Generator()
+    
+    create_dataset = True
 
-    while True:
+    dataset_root = Path("~/text_dataset_100k_new")
+    dataset_root.mkdir(exist_ok=True, parents=True)
+    
+    if create_dataset:
+        csv_file = (dataset_root / "labels.csv").open("w", encoding="utf-8")
+        csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow(["filename", "words"])    
+
+    for i in range(100000):
         img, lbl = next(gen)
         print(f"Len: {len(lbl)}")
-        cv2.imshow(f"main", np.asarray(img))
-        cv2.waitKey()
+        # cv2.imshow(f"main", np.asarray(img))
+        # cv2.waitKey()
+        print(f"[{i}] Text({len(lbl)}): {lbl}")
         
+        if create_dataset:
+            fname = f"{i}.png"
+            fpath = dataset_root / fname
+            img.save(str(fpath))
+            csv_writer.writerow([str(fname), lbl])
+        else:
+            cv2.imshow(f"main", np.asarray(img))
+            cv2.waitKey()
+
+    if create_dataset:
+        csv_writer = None
+        csv_file.close()
