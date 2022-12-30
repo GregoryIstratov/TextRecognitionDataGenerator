@@ -83,11 +83,9 @@ class FakeTextDataGenerator(object):
                 stroke_fill,
             )
         if len(text) > 50:
-            skewing_angle = 0
-            random_angle = 0
-            random_skew = False
-        elif len(text) > 30:
-            random_angle = rnd.randint(-2, 2)
+            random_angle = rnd.randint(0 - skewing_angle // 3, skewing_angle // 3)
+        elif len(text) > 38:
+            random_angle = rnd.randint(0 - skewing_angle // 2, skewing_angle // 2)
         else:
             random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
 

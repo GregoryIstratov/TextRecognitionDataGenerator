@@ -8,7 +8,8 @@ from trdg.generators import (
     GeneratorFromDict,
     GeneratorFromRandom,
     GeneratorFromWikipedia,
-    GeneratorFromStrings
+    GeneratorFromStrings,
+    GeneratorFromGenerator
 )
 
 from trdg.utils import load_fonts
@@ -20,132 +21,97 @@ def union_fonts(a: list, b: list):
     r = [x for x in c.values()]
     return r
 
-class Generator:
-    grayscale = True
-    NUM = -1
-
-    def __init__(self) -> None:
-        self.fonts_ru = load_fonts('ru')
-        self.fonts_en = load_fonts('en')
-        self.fonts_all = union_fonts(fonts_ru, fonts_en)
-
-
-def numeric_strings_gen(count=NUM):
-    
-    strings = []
-    for i in range(int(count/2)):
+def random_numeric_string():  
+    def gen1():
         d = random.randint(0, 99)
         m = random.randint(0, 99)
         y = random.randint(0, 9999)
         
         s = f"{d:02d}.{m:02d}.{y:04d}"
         
-        strings.append(s)
+        return s
         
-    for i in range(int(count/2)):
+    def gen2():
         a = random.randint(0, 99)
         b = random.randint(0, 99)
-        c = random.randint(1000000000, 9999999999)
+        c = random.randint(100000, 999999)
         
-        s = f"{a:02d} {b:02d} {c:010d}"
+        s = f"{a:02d} {b:02d} {c:06d}"
         
-        strings.append(s)
+        return s
         
-    for i in range(int(count/2)):
+    def gen3():
         a = random.randint(10, 999)
         b = random.randint(10, 999)
         
         s = f"{a:03d}-{b:03d}"
         
-        strings.append(s)
+        return s
+    
+    
+    f = [gen1, gen2, gen3]
+    
+    c = random.randint(0, len(f) - 1)
         
-    return strings
+    return f[c]()
+
+def random_numeric_string_gen():
+    while True:
+        yield random_numeric_string()
         
-    
-generator_num = GeneratorFromStrings(numeric_strings_gen(), fonts=fonts_all, size=64, random_blur=True, blur=1.5, skewing_angle=4, random_skew=True, background_type=4, distorsion_type=1)
-    
+     
 
-generator_sym_ru = GeneratorFromRandom(count=-1, length=2, allow_variable=True, fonts=fonts_ru, language="ru",
-                                    use_letters=True,
-                                    size=64, random_blur=False, blur=2, skewing_angle=4, random_skew=True, background_type=4,
-                                    image_dir='trdg/images'
-                                    )
+class Generator:
+    grayscale = True
+    NUM = -1
+    height = 128
+    index = 0
+    blur = 4
+    skew_angle = 10
+    length = 4
 
-generator_sym_en = GeneratorFromRandom(count=-1, length=2, allow_variable=True, fonts=fonts_en, language="en",
-                                    use_letters=True,
-                                    size=64, random_blur=True, blur=4, skewing_angle=4, random_skew=True, background_type=4,
-                                    image_dir='trdg/images'
-                                    )
+    def __init__(self) -> None:
+        self.fonts_ru = load_fonts('ru')
+        self.fonts_en = load_fonts('en')
+        self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
+        
+        self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
+                                                    random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=True, 
+                                                    background_type=4, distorsion_type=1)
 
-def create_dict_generator(lang, fonts):
-    return GeneratorFromDict(count=NUM, fonts=fonts, length=2, language=lang, 
-                                random_blur=True, blur=1.5, allow_variable=True,
-                                skewing_angle=4,
-                                random_skew=True,
-                                background_type=4,
-                                distorsion_type=1,                                
-                                size=64
-                                )
+        self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
+        self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
+        self.generator_sym = GeneratorFromRandom(count=-1, length=self.length, allow_variable=True, fonts=self.fonts_all, language="en",
+                                                use_letters=False, size=self.height, random_blur=True, blur=self.blur, 
+                                                skewing_angle=self.skew_angle, random_skew=True, 
+                                                background_type=4, distorsion_type=1
+                                                )
+        
+        self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
+        pass
+        
+    def __create_dict_generator(self, lang, height, fonts):
+        return GeneratorFromDict(count=-1, fonts=fonts, length=self.length, language=lang, 
+                                    random_blur=True, blur=self.blur, allow_variable=True,
+                                    skewing_angle=self.skew_angle,
+                                    random_skew=True,
+                                    background_type=4,
+                                    distorsion_type=1,                                
+                                    size=height
+                                    )       
+    def __next__(self):
+        c = self.index % len(self.gens)
+        self.index = self.index + 1
+        img, lbl = next(self.gens[c])
+        return img, lbl
 
-def create_wiki_generator(lang, fonts):
-    return GeneratorFromWikipedia(count=-1, fonts=fonts, language=lang, 
-                                random_blur=True, blur=3,
-                                skewing_angle=4,
-                                random_skew=True,
-                                background_type=4,
-                                image_dir='trdg/images',
-                                size=64
-                                )
 
-generator_ru = create_dict_generator(lang='ru', fonts=fonts_ru)
-generator_en = create_dict_generator(lang='en', fonts=fonts_all)
+if __name__ == "__main__":
+    gen = Generator()
 
-create_dataset = True
-
-dataset_root = Path("~/text_dataset_ru_gray_10k3")
-dataset_root.mkdir(exist_ok=True, parents=True)
-
-if create_dataset:
-    csv_file = (dataset_root / "labels.csv").open("w", encoding="utf-8")
-    csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    csv_writer.writerow(["filename", "words"])
-
-widths = []
-for i in range(NUM):
-
-    c = i % 2
-    #c = 0
-    if c == 0:
-        img, lbl = next(generator_ru)
-    elif c == 1:
-        #img, lbl = next(generator_sym_ru)
-        img, lbl = next(generator_num)
-    elif c == 2:
-        img, lbl = next(generator_en)
-    else:
-        img, lbl = next(generator_sym_en)
-
-    # Do something with the pillow images here.
-    print(f"[{i}] Text: {lbl}")
-    print(f"Image size: {np.asarray(img).shape}")
-    widths.append(np.asarray(img).shape[1])
-    
-    print(f"Avg. width: {np.average(widths)}")
-    
-    if grayscale:
-        img = img.convert('L')
-    
-    if create_dataset:
-        fname = f"{i}.png"
-        fpath = dataset_root / fname
-        img.save(str(fpath))
-        csv_writer.writerow([str(fname), lbl])
-    else:
+    while True:
+        img, lbl = next(gen)
+        print(f"Len: {len(lbl)}")
         cv2.imshow(f"main", np.asarray(img))
         cv2.waitKey()
-
-if create_dataset:
-    csv_writer = None
-    csv_file.close()
-    
-print("End")
+        
