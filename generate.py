@@ -71,8 +71,9 @@ class Generator:
     length: int
     rgb: bool
     sensitive: bool
+    image_mode: str
 
-    def __init__(self, height: int = 64, blur: int = 3, skew_angle: int = 4, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 96, blur: int = 3, skew_angle: int = 4, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -80,20 +81,26 @@ class Generator:
         self.rgb = rgb
         self.sensitive = sensitive
         
+        if not self.rgb:
+            self.image_mode = 'L'
+        else:
+            self.image_mode = 'RGB'
+        
         self.fonts_ru = load_fonts('ru')
         self.fonts_en = load_fonts('en')
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
         self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
                                                     random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=True, 
-                                                    background_type=4, distorsion_type=1)
+                                                    background_type=4, distorsion_type=1, image_mode=self.image_mode)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
         self.generator_sym = GeneratorFromRandom(count=-1, length=self.length, allow_variable=True, fonts=self.fonts_all, language="en",
                                                 use_letters=False, size=self.height, random_blur=True, blur=self.blur, 
                                                 skewing_angle=self.skew_angle, random_skew=True, 
-                                                background_type=4, distorsion_type=1
+                                                background_type=4, distorsion_type=1,
+                                                image_mode=self.image_mode
                                                 )
         
         self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
@@ -106,7 +113,8 @@ class Generator:
                                     random_skew=True,
                                     background_type=4,
                                     distorsion_type=1,                                
-                                    size=height
+                                    size=height,
+                                    image_mode=self.image_mode
                                     )       
     def __next__(self):
         while True:
@@ -114,9 +122,6 @@ class Generator:
                 c = self.index % len(self.gens)
                 self.index = self.index + 1
                 img, lbl = next(self.gens[c])
-                
-                if not self.rgb:
-                    img = img.convert('L')
                     
                 if not self.sensitive:
                     lbl = lbl.upper()
