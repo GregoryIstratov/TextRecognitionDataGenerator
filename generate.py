@@ -13,11 +13,6 @@ from trdg.generators import (
 
 from trdg.utils import load_fonts
 
-grayscale = True
-NUM = 10000
-fonts_ru = load_fonts('ru')
-fonts_en = load_fonts('en')
-
 def union_fonts(a: list, b: list):
     a = {str(Path(x).name): x for x in a}
     b = {str(Path(x).name): x for x in b}
@@ -25,7 +20,14 @@ def union_fonts(a: list, b: list):
     r = [x for x in c.values()]
     return r
 
-fonts_all = union_fonts(fonts_ru, fonts_en)
+class Generator:
+    grayscale = True
+    NUM = -1
+
+    def __init__(self) -> None:
+        self.fonts_ru = load_fonts('ru')
+        self.fonts_en = load_fonts('en')
+        self.fonts_all = union_fonts(fonts_ru, fonts_en)
 
 
 def numeric_strings_gen(count=NUM):
