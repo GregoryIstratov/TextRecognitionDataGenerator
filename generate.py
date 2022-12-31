@@ -36,7 +36,7 @@ def random_numeric_string():
         b = random.randint(0, 99)
         c = random.randint(100000, 999999)
         
-        s = f"{a:02d} {b:02d} {c:06d}"
+        s = f"{a:02d} {b:02d}  {c:06d}"
         
         return s
         
@@ -48,8 +48,16 @@ def random_numeric_string():
         
         return s
     
+    def gen4():
+        a = random.randint(10, 999)
+        b = random.randint(10, 999)
+        c = random.randint(100000, 999999)
+        
+        s = f"{a:03d},{b:03d}: ({c:06d})"
+        
+        return s    
     
-    f = [gen1, gen2, gen3]
+    f = [gen1, gen2, gen3, gen4]
     
     c = random.randint(0, len(f) - 1)
         
@@ -103,7 +111,8 @@ class Generator:
                                                 image_mode=self.image_mode
                                                 )
         
-        self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
+        #self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
+        self.gens = [self.generator_num, self.generator_ru, self.generator_en]
         pass
         
     def __create_dict_generator(self, lang: str, height: int, fonts: list[str]):
