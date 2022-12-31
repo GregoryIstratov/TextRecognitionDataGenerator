@@ -6,6 +6,7 @@ import os
 import random
 import re
 import unicodedata
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -62,23 +63,32 @@ def load_dict(path: str) -> List[str]:
 
 def load_fonts(lang: str) -> List[str]:
     """Load all fonts in the fonts directories"""
+    
+    def __load_dir(p: Path):
+        fonts = []
+        for item in p.iterdir():
+            if item.is_file() and item.name.lower().endswith((".ttf", ".otf")):
+                fonts.append(item)
+            elif item.is_dir():
+                fonts += __load_dir(item)
+            else:
+                print(f"[load_fonts] Skipping {item}")
+                continue
+        return fonts
 
-    if lang in os.listdir(os.path.join(os.path.dirname(__file__), "fonts")):
-        return [
-            os.path.join(os.path.dirname(__file__),
-                         "fonts/{}".format(lang), font)
-            for font in os.listdir(
-                os.path.join(os.path.dirname(__file__),
-                             "fonts/{}".format(lang))
-            )
-        ]
+    if lang == "en":
+        lang = "latin"
+    
+    fonts = []
+    curdir = Path(os.path.dirname(__file__)) / "fonts"
+    langs = [x for x in curdir.iterdir() if x.is_dir() and str(x.stem) == lang]
+    if len(langs) > 0:
+        fonts = __load_dir(langs[0])
     else:
-        return [
-            os.path.join(os.path.dirname(__file__), "fonts/latin", font)
-            for font in os.listdir(
-                os.path.join(os.path.dirname(__file__), "fonts/latin")
-            )
-        ]
+        raise FileNotFoundError(f"{lang} not found")
+    
+    fonts = [str(x) for x in fonts]
+    return fonts
 
 
 def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
