@@ -165,14 +165,15 @@ class FakeTextDataGenerator(object):
             raise ValueError("Invalid orientation")
         
         
-        apply_text_noise = rnd.choice([True, False])
+        #apply_text_noise = rnd.choice([True, False])
+        apply_text_noise = False
         
         ################################
         # Apply noise over text image  #
         ################################
         
         if apply_text_noise:
-            c = rnd.randint(0, 1)
+            c = rnd.randint(0, 2)
             match c:
                 case 0:
                     resized_img = add_image_noise(resized_img)
@@ -181,6 +182,8 @@ class FakeTextDataGenerator(object):
                         radius=blur if not random_blur else rnd.random() * blur
                     )
                     resized_img = resized_img.filter(gaussian_filter)
+                case 2:
+                    pass
 
         #############################
         # Generate background image #
@@ -231,10 +234,12 @@ class FakeTextDataGenerator(object):
             resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
             background_img_st = ImageStat.Stat(background_img)
 
-            resized_img_px_mean = sum(resized_img_st.mean[:2]) / 3
-            background_img_px_mean = sum(background_img_st.mean) / 3
+            resized_img_px_mean = sum(resized_img_st.mean[:3]) / 3
+            background_img_px_mean = sum(background_img_st.mean[:3]) / 3
+            df = abs(resized_img_px_mean - background_img_px_mean)
 
-            if abs(resized_img_px_mean - background_img_px_mean) < 15:
+            print(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df}")
+            if df < 50:
                 print("value of mean pixel is too similar. Ignore this image")
 
                 print("resized_img_st \n {}".format(resized_img_st.mean))

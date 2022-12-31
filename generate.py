@@ -3,6 +3,7 @@ import random
 import numpy as np
 import cv2
 import csv
+from PIL import Image
 
 from trdg.generators import (
     GeneratorFromDict,
@@ -12,7 +13,7 @@ from trdg.generators import (
     GeneratorFromGenerator
 )
 
-from trdg.utils import load_fonts
+from trdg.utils import load_fonts, add_image_noise
 
 def union_fonts(a: list, b: list):
     a = {str(Path(x).name): x for x in a}
@@ -81,7 +82,7 @@ class Generator:
     sensitive: bool
     image_mode: str
 
-    def __init__(self, height: int = 96, blur: float = 2.5, skew_angle: int = 4, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 96, blur: float = 2.5, skew_angle: int = 3, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -112,7 +113,8 @@ class Generator:
                                                 )
         
         #self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
-        self.gens = [self.generator_num, self.generator_ru, self.generator_en]
+        #self.gens = [self.generator_num, self.generator_ru, self.generator_en]
+        self.gens = [self.generator_ru]
         pass
         
     def __create_dict_generator(self, lang: str, height: int, fonts: list[str]):
@@ -134,6 +136,15 @@ class Generator:
                 if img is None:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
+                
+                enable_downsample = random.choices([True, False], weights=[0.75, 0.25], k=1)[0]
+                
+                if enable_downsample:
+                    dfactor = random.choice([2,3,4])
+                    img_np = np.asarray(img)
+                    img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
+                    img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_LINEAR)
+                    img = Image.fromarray(img_np)
                     
                 if not self.sensitive:
                     lbl = lbl.upper()

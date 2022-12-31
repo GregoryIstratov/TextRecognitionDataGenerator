@@ -16,16 +16,23 @@ import cv2
 def add_image_noise(image: Image) -> Image:
     img = np.asarray(image).astype(np.float32)
     
-    c = random.randint(1, 4)
+    #c = random.randint(1, 1)
+    c = 1
 
     noise = np.ones((img.shape[0] // c, img.shape[1] // c), dtype=np.float32)
+    #noise = np.ones((img.shape[0] * c, img.shape[1] * c), dtype=np.float32)
     #cv2.randu(noise, 1, 3)
-    cv2.randn(noise, 1, 1)
-    noise = cv2.resize(noise, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_LINEAR)
+    cv2.randn(noise, 1, 0.2)
+    #noise = cv2.resize(noise, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+    #noise = cv2.blur(noise, (3,3))
         
-    img[:,:, 0] = img[:,:, 0] * noise
-    img[:,:, 1] = img[:,:, 1] * noise
-    img[:,:, 2] = img[:,:, 2] * noise
+    if len(img.shape) > 2 and img.shape[2] == 3:
+        img[:,:, 0] = img[:,:, 0] * noise
+        img[:,:, 1] = img[:,:, 1] * noise
+        img[:,:, 2] = img[:,:, 2] * noise
+    else:
+        img = img * noise
+    
     #img[img>255] = 255
     return Image.fromarray(img.astype(np.uint8))
 

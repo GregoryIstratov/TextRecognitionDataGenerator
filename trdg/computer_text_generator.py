@@ -83,6 +83,9 @@ def _generate_horizontal_text(
     stroke_width: int = 0,
     stroke_fill: str = "#282828",
 ) -> Tuple:
+    
+    text_color = "#282828,#707070"
+    stroke_fill = "#282828,#707070"
 
     #print(f"Font: {font} size {font_size}")
     
