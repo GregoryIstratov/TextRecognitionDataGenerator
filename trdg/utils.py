@@ -79,7 +79,7 @@ def load_fonts(lang: str) -> List[str]:
     if lang == "en":
         lang = "latin"
     
-    fonts = []
+    fonts: list[Path] = []
     curdir = Path(os.path.dirname(__file__)) / "fonts"
     langs = [x for x in curdir.iterdir() if x.is_dir() and str(x.stem) == lang]
     if len(langs) > 0:
@@ -87,7 +87,8 @@ def load_fonts(lang: str) -> List[str]:
     else:
         raise FileNotFoundError(f"{lang} not found")
     
-    fonts = [str(x) for x in fonts]
+    
+    fonts = [str(x) for x in fonts if x.is_file()]
     return fonts
 
 
