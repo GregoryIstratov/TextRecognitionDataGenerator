@@ -189,7 +189,7 @@ class FakeTextDataGenerator(object):
         def generate_backgound():
             #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
             c = rnd.randint(0, 7)
-            #c = 0
+            #c = 1
             match c:
                 case 0:
                     return background_generator.gaussian_noise(
@@ -240,7 +240,7 @@ class FakeTextDataGenerator(object):
             df = abs(resized_img_px_mean - background_img_px_mean)
 
             debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
-            if df < 45:
+            if df < 15:
                 print("value of mean pixel is too similar. Ignore this image")
 
                 print("resized_img_st \n {}".format(resized_img_st.mean))
