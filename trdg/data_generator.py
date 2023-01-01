@@ -5,7 +5,7 @@ from PIL import Image, ImageFilter, ImageStat
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
 from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise
-from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD
+from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD, MyNoise_MARBLE
 
 try:
     from trdg import handwritten_text_generator
@@ -65,24 +65,19 @@ class FakeTextDataGenerator(object):
         ##########################
         # Create picture of text #
         ##########################
-        if is_handwritten:
-            if orientation == 1:
-                raise ValueError("Vertical handwritten text is unavailable")
-            image, mask = handwritten_text_generator.generate(text, text_color)
-        else:
-            image, mask = computer_text_generator.generate(
-                text,
-                font,
-                text_color,
-                size,
-                orientation,
-                space_width,
-                character_spacing,
-                fit,
-                word_split,
-                stroke_width,
-                stroke_fill,
-            )
+        image, mask = computer_text_generator.generate(
+            text,
+            font,
+            text_color,
+            size,
+            orientation,
+            space_width,
+            character_spacing,
+            fit,
+            word_split,
+            stroke_width,
+            stroke_fill,
+        )
         if len(text) > 50:
             random_angle = rnd.randint(0 - skewing_angle // 3, skewing_angle // 3)
         elif len(text) > 32:
@@ -102,7 +97,7 @@ class FakeTextDataGenerator(object):
         # Apply distorsion to image #
         #############################
         if distorsion_type > 0:
-            distorsion_type = rnd.randint(0, 2)
+            distorsion_type = rnd.randint(0, 3)
         
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
@@ -165,21 +160,24 @@ class FakeTextDataGenerator(object):
             raise ValueError("Invalid orientation")
         
         
-        #apply_text_noise = rnd.choice([True, False])
-        apply_text_noise = False
+        apply_text_noise = rnd.choice([True, False])
+        #apply_text_noise = True
         
         ################################
         # Apply noise over text image  #
         ################################
         
+        text_blur_fact = 0
         if apply_text_noise:
-            c = rnd.randint(0, 2)
+            #c = rnd.randint(0, 2)
+            c = 1
             match c:
                 case 0:
                     resized_img = add_image_noise(resized_img)
                 case 1:
+                    text_blur_fact = blur if not random_blur else rnd.random() * blur
                     gaussian_filter = ImageFilter.GaussianBlur(
-                        radius=blur if not random_blur else rnd.random() * blur
+                        radius=text_blur_fact
                     )
                     resized_img = resized_img.filter(gaussian_filter)
                 case 2:
@@ -190,14 +188,15 @@ class FakeTextDataGenerator(object):
         #############################
         def generate_backgound():
             #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
-            c = rnd.randint(0, 6)
+            c = rnd.randint(0, 7)
+            #c = 0
             match c:
                 case 0:
                     return background_generator.gaussian_noise(
                         background_height, background_width
                     )
                 case 1:
-                    return background_generator.plain_white(
+                    return background_generator.plain_color(
                         background_height, background_width
                     )
                 case 2:
@@ -217,6 +216,8 @@ class FakeTextDataGenerator(object):
                     return background_generator.my_noise(background_height, background_width, MyNoise_INTER(12))
                 case 6:
                     return background_generator.my_noise(background_height, background_width, MyNoise_CLOUD(8, 8))
+                case 7:
+                    return background_generator.my_noise(background_height, background_width, MyNoise_MARBLE())
                 case _:
                     raise RuntimeError("Unknown background type")
 
@@ -238,14 +239,14 @@ class FakeTextDataGenerator(object):
             background_img_px_mean = sum(background_img_st.mean[:3]) / 3
             df = abs(resized_img_px_mean - background_img_px_mean)
 
-            print(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df}")
-            if df < 50:
+            print(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
+            if df < 45:
                 print("value of mean pixel is too similar. Ignore this image")
 
                 print("resized_img_st \n {}".format(resized_img_st.mean))
                 print("background_img_st \n {}".format(background_img_st.mean))
 
-                return
+                #return
         except Exception as err:
             return
 

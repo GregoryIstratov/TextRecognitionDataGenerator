@@ -3,6 +3,7 @@ from typing import Tuple
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 
 from trdg.utils import get_text_width, get_text_height
+from trdg.meta_image import MetaImage
 
 # Thai Unicode reference: https://jrgraphix.net/r/Unicode/0E00-0E7F
 TH_TONE_MARKS = [
@@ -92,7 +93,7 @@ def _generate_horizontal_text(
     image_font = ImageFont.truetype(font=font, size=font_size)
 
     space_width = int(get_text_width(image_font, " ") * space_width)
-
+    
     if word_split:
         splitted_text = []
         for w in text.split(" "):
@@ -154,6 +155,7 @@ def _generate_horizontal_text(
             stroke_width=stroke_width,
             stroke_fill=stroke_fill,
         )
+    print(f"Font: size={font_size} space_width={space_width} text_width={text_width} text_height={text_height} fill={fill} stroke_fill={stroke_fill}")
 
     if fit:
         return txt_img.crop(txt_img.getbbox()), txt_mask.crop(txt_img.getbbox())
