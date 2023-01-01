@@ -2,7 +2,7 @@ import random as rnd
 from typing import Tuple
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 
-from trdg.utils import get_text_width, get_text_height
+from trdg.utils import get_text_width, get_text_height, debug
 from trdg.meta_image import MetaImage
 
 # Thai Unicode reference: https://jrgraphix.net/r/Unicode/0E00-0E7F
@@ -88,7 +88,7 @@ def _generate_horizontal_text(
     text_color = "#282828,#707070"
     stroke_fill = "#282828,#707070"
 
-    #print(f"Font: {font} size {font_size}")
+    #debug(f"Font: {font} size {font_size}")
     
     image_font = ImageFont.truetype(font=font, size=font_size)
 
@@ -155,7 +155,7 @@ def _generate_horizontal_text(
             stroke_width=stroke_width,
             stroke_fill=stroke_fill,
         )
-    print(f"Font: size={font_size} space_width={space_width} text_width={text_width} text_height={text_height} fill={fill} stroke_fill={stroke_fill}")
+    debug(f"Font: size={font_size} space_width={space_width} text_width={text_width} text_height={text_height} fill={fill} stroke_fill={stroke_fill}")
 
     if fit:
         return txt_img.crop(txt_img.getbbox()), txt_mask.crop(txt_img.getbbox())

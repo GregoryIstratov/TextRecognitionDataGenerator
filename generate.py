@@ -13,7 +13,7 @@ from trdg.generators import (
     GeneratorFromGenerator
 )
 
-from trdg.utils import load_fonts, add_image_noise
+from trdg.utils import load_fonts, add_image_noise, debug
 
 def union_fonts(a: list, b: list):
     a = {str(Path(x).name): x for x in a}
@@ -166,9 +166,16 @@ if __name__ == "__main__":
     gen = Generator()
     
     create_dataset = False
+    benchmark = False
 
     dataset_root = Path("~/text_dataset_100k_new")
     dataset_root.mkdir(exist_ok=True, parents=True)
+    
+    if benchmark:
+        for i in range(500):
+            _,_ = next(gen)
+            
+        exit()
     
     if create_dataset:
         csv_file = (dataset_root / "labels.csv").open("w", encoding="utf-8")
@@ -177,10 +184,10 @@ if __name__ == "__main__":
 
     for i in range(100000):
         img, lbl = next(gen)
-        print(f"Len: {len(lbl)}")
+        debug(f"Len: {len(lbl)}")
         # cv2.imshow(f"main", np.asarray(img))
         # cv2.waitKey()
-        print(f"[{i}] Text({len(lbl)}): {lbl}")
+        debug(f"[{i}] Text({len(lbl)}): {lbl}")
         
         if create_dataset:
             fname = f"{i}.png"

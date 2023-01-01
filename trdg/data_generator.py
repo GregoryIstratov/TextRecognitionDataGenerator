@@ -4,7 +4,7 @@ import random as rnd
 from PIL import Image, ImageFilter, ImageStat
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
-from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise
+from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, debug
 from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD, MyNoise_MARBLE
 
 try:
@@ -239,7 +239,7 @@ class FakeTextDataGenerator(object):
             background_img_px_mean = sum(background_img_st.mean[:3]) / 3
             df = abs(resized_img_px_mean - background_img_px_mean)
 
-            print(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
+            debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
             if df < 45:
                 print("value of mean pixel is too similar. Ignore this image")
 

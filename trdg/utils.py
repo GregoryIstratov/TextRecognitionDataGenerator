@@ -8,10 +8,16 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import List, Tuple
+import time
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import cv2
+
+def debug(msg: str):
+    # dt = time.strftime("%H:%M:%S")
+    # print(f"[{dt}][DBG]: {msg}")
+    pass
 
 def add_image_noise(image: Image) -> Image:
     img = np.asarray(image).astype(np.float32)

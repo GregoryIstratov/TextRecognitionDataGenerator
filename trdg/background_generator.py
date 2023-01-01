@@ -1,3 +1,4 @@
+from typing import Any
 import cv2
 import math
 import os
@@ -9,8 +10,8 @@ from PIL import Image, ImageDraw, ImageFilter
 from dataclasses import dataclass
 from scipy.ndimage._filters import gaussian_filter
 
-@jit
-def clouds(arr: np.array, x: int, y: int, size: float, m:int = 128) -> np.float32:
+@jit(nopython=True)
+def clouds(arr: np.ndarray, x: int, y: int, size: float, m:int = 128) -> np.float32:
     value: np.float32 = 0.0
     initial_size: np.float32 = size
     
@@ -40,8 +41,8 @@ class MyNoise_MARBLE:
 MyNoise_BASIC = MyNoise_INTER | MyNoise_CLUSTER
 MyNoiseType = MyNoise_BASIC | MyNoise_CLOUD
 
-@jit
-def marble(width: int, height: int, dfactor: int = 1) -> np.array:
+@jit(nopython=True)
+def marble(width: int, height: int, dfactor: int = 1) -> np.ndarray:
     noise_min = 0.0
     noise_max = 1.0
         
@@ -65,16 +66,28 @@ def marble(width: int, height: int, dfactor: int = 1) -> np.array:
             image[y, x] = np.uint8(sine_value)
             
     return image
+
+@jit(nopython=True)
+def cloud_noise(noise: np.ndarray, width: int, height: int, cloud_size: float) -> np.ndarray:
+    image = np.ones((height, width), dtype=np.float32)   
+    
+    for y in range(height):
+        for x in range(width):                      
+            image[y, x] = clouds(noise, x, y, cloud_size)
+    return image
+
             
 
 def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
     noise_min = 0.25
     noise_max = 0.75
     
-    def __create_noise(size, inter):
-        noise = np.ones((height//size, width//size), dtype=np.float32)
-        cv2.randu(noise, noise_min, noise_max)
-        #cv2.randn(noise, 0.75, 0.25)
+    def __create_noise(size, inter):        
+        noise_width = width // size
+        noise_height = height // size
+                
+        noise = np.random.uniform(noise_min, noise_max, (noise_height, noise_width))
+        
         return cv2.resize(noise, dsize=(width, height), interpolation=inter)
 
     def __do_noise():
@@ -86,14 +99,13 @@ def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
                 noise = __create_noise(size, cv2.INTER_LINEAR)
                 return noise * 255
             case MyNoise_CLOUD(size, cloud_size):
-                noise = np.ones((height//size, width//size), dtype=np.float32)
-                cv2.randu(noise, noise_min, noise_max)                
-                image = np.ones((height, width), dtype=np.float32)
-                noise = cv2.resize(noise, dsize=(width, height), interpolation=cv2.INTER_LINEAR)
-                for y in range(0, height):
-                    for x in range(0, width):
-                        image[y, x] = clouds(noise, x, y, cloud_size)
-                return image
+                noise_width = width // size
+                noise_height = height // size
+                
+                noise = np.random.uniform(noise_min, noise_max, (noise_height, noise_width))             
+                noise = cv2.resize(noise, dsize=(width, height), interpolation=cv2.INTER_LINEAR)                
+                
+                return cloud_noise(noise, width, height, cloud_size)
             case MyNoise_MARBLE:                
                 image = marble(width, height)   
                 image = gaussian_filter(image, sigma=1)
@@ -149,7 +161,7 @@ def __quasicrystal(height: int, width: int) -> np.array:
                 r = math.hypot(x, y)
                 a = math.atan2(y, x) + i * math.pi * 2.0 / rotation_count
                 z += math.cos(r * math.sin(a) * frequency + phase)
-            c = int(255 - round(200 * z / rotation_count))
+            c = int(128 - round(128 * z / rotation_count))
             image[kh, kw] = c  # grayscale
             
     return image
