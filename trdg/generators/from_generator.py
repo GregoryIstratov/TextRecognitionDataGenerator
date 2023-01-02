@@ -1,4 +1,5 @@
 import os
+import random
 from typing import List, Tuple
 
 from trdg.data_generator import FakeTextDataGenerator
@@ -97,11 +98,13 @@ class GeneratorFromGenerator:
     def next(self):
         self.generated_count += 1
         text = next(self.generator)
+        font = self.fonts[random.randint(0, len(self.fonts) - 1)]
+        
         return (
             FakeTextDataGenerator.generate(
                 self.generated_count,
                 text,
-                self.fonts[(self.generated_count - 1) % len(self.fonts)],
+                font,
                 None,
                 self.size,
                 None,

@@ -1,4 +1,5 @@
 import os
+import random
 from typing import List, Tuple
 
 from trdg.data_generator import FakeTextDataGenerator
@@ -100,11 +101,15 @@ class GeneratorFromStrings:
         if self.generated_count == self.count:
             raise StopIteration
         self.generated_count += 1
+        
+        font = self.fonts[random.randint(0, len(self.fonts) - 1)]
+        text = self.strings[random.randint(0, len(self.strings) - 1)]
+        
         return (
             FakeTextDataGenerator.generate(
                 self.generated_count,
-                self.strings[(self.generated_count - 1) % len(self.strings)],
-                self.fonts[(self.generated_count - 1) % len(self.fonts)],
+                text,
+                font,
                 None,
                 self.size,
                 None,
@@ -133,9 +138,7 @@ class GeneratorFromStrings:
                 self.image_mode,
                 self.output_bboxes,
             ),
-            self.orig_strings[(self.generated_count - 1) % len(self.orig_strings)]
-            if self.rtl
-            else self.strings[(self.generated_count - 1) % len(self.strings)],
+            text
         )
 
     def reshape_rtl(self, strings: list, rtl_shaper: ArabicReshaper):

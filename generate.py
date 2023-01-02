@@ -81,8 +81,9 @@ class Generator:
     rgb: bool
     sensitive: bool
     image_mode: str
+    distortion_type: int = 0
 
-    def __init__(self, height: int = 128, blur: float = 4, skew_angle: int = 3, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 128, blur: float = 4, skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -101,14 +102,14 @@ class Generator:
         
         self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
                                                     random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=True, 
-                                                    distorsion_type=1, image_mode=self.image_mode)
+                                                    distorsion_type=self.distortion_type, image_mode=self.image_mode)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
         self.generator_sym = GeneratorFromRandom(count=-1, length=self.length, allow_variable=True, fonts=self.fonts_all, language="en",
                                                 use_letters=False, size=self.height, random_blur=True, blur=self.blur, 
                                                 skewing_angle=self.skew_angle, random_skew=True, 
-                                                distorsion_type=1,
+                                                distorsion_type=self.distortion_type,
                                                 image_mode=self.image_mode
                                                 )
         
@@ -122,7 +123,7 @@ class Generator:
                                     random_blur=True, blur=self.blur, allow_variable=True,
                                     skewing_angle=self.skew_angle,
                                     random_skew=True,
-                                    distorsion_type=1,                                
+                                    distorsion_type=self.distortion_type,                                
                                     size=height,
                                     image_mode=self.image_mode
                                     )       
@@ -137,12 +138,12 @@ class Generator:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
                 
-                enable_downsample = random.random() < 0.35
+                enable_downsample = random.random() < 0.66
                 #enable_downsample = False
                 
                 if enable_downsample:
                     #dfactor = random.choice([2,3,4])
-                    dfactor = 4
+                    dfactor = 5
                     img_np = np.asarray(img)
                     img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
                     img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_LINEAR)
@@ -151,7 +152,7 @@ class Generator:
                 def invert_image(img: Image):
                     return Image.fromarray(cv2.bitwise_not(np.asarray(img)))
                 
-                if random.random() < 0.35:
+                if random.random() < 0.5:
                     img = invert_image(img)
                     
                 if not self.sensitive:
@@ -184,10 +185,9 @@ if __name__ == "__main__":
 
     for i in range(100000):
         img, lbl = next(gen)
-        debug(f"Len: {len(lbl)}")
         # cv2.imshow(f"main", np.asarray(img))
         # cv2.waitKey()
-        debug(f"[{i}] Text({len(lbl)}): {lbl}")
+        debug(f"[{i}] {img.size} Text({len(lbl)}): {lbl}")
         
         if create_dataset:
             fname = f"{i}.png"
