@@ -85,10 +85,10 @@ class Generator:
     rgb: bool
     sensitive: bool
     image_mode: str
-    distortion_type: int = 1
+    distortion_type: int = 0
     random_skew: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 2, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 3, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -168,8 +168,8 @@ class Generator:
                     return Image.fromarray(cv2.filter2D(img, -1, k))
                 
                 
-                if random.random() < 0.4:
-                    mb_sz = random.randint(8, 14)
+                if random.random() < 0.5:
+                    mb_sz = random.randint(10, 15)
                     mb_angle = random.randint(0, 360)
                     img = apply_motion_blur(img, mb_sz, mb_angle)               
                 

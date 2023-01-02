@@ -160,7 +160,7 @@ class FakeTextDataGenerator(object):
             raise ValueError("Invalid orientation")
         
         
-        apply_text_noise = rnd.choice([True, False])
+        apply_text_noise = rnd.random() < 0.3
         #apply_text_noise = True
         
         ################################
