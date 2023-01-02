@@ -39,7 +39,7 @@ def random_numeric_string():
         c = random.randint(100000, 999999)
         
         if random.random() < 0.2:    
-            s = f"{a:02d} {b:02d} №{c:06d}"
+            s = f"{a:02d} {b:02d} {c:06d}"
         else:
             s = f"{a:02d} {b:02d} {c:06d}"
         
