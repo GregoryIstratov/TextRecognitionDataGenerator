@@ -38,7 +38,10 @@ def random_numeric_string():
         b = random.randint(0, 99)
         c = random.randint(100000, 999999)
         
-        s = f"{a:02d} {b:02d}  {c:06d}"
+        if random.random() < 0.2:    
+            s = f"{a:02d} {b:02d} №{c:06d}"
+        else:
+            s = f"{a:02d} {b:02d} {c:06d}"
         
         return s
         
@@ -83,8 +86,9 @@ class Generator:
     sensitive: bool
     image_mode: str
     distortion_type: int = 1
+    random_skew: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 1, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 2, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -102,14 +106,14 @@ class Generator:
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
         self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
-                                                    random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=True, 
+                                                    random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=self.random_skew, 
                                                     distorsion_type=self.distortion_type, image_mode=self.image_mode)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
         self.generator_sym = GeneratorFromRandom(count=-1, length=self.length, allow_variable=True, fonts=self.fonts_all, language="en",
                                                 use_letters=False, size=self.height, random_blur=True, blur=self.blur, 
-                                                skewing_angle=self.skew_angle, random_skew=True, 
+                                                skewing_angle=self.skew_angle, random_skew=self.random_skew, 
                                                 distorsion_type=self.distortion_type,
                                                 image_mode=self.image_mode
                                                 )
@@ -123,7 +127,7 @@ class Generator:
         return GeneratorFromDict(count=-1, fonts=fonts, length=self.length, language=lang, 
                                     random_blur=True, blur=self.blur, allow_variable=True,
                                     skewing_angle=self.skew_angle,
-                                    random_skew=True,
+                                    random_skew=self.random_skew,
                                     distorsion_type=self.distortion_type,                                
                                     size=height,
                                     image_mode=self.image_mode
