@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 import random
 import numpy as np
@@ -81,9 +82,9 @@ class Generator:
     rgb: bool
     sensitive: bool
     image_mode: str
-    distortion_type: int = 0
+    distortion_type: int = 1
 
-    def __init__(self, height: int = 128, blur: float = 4, skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 1, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -138,12 +139,12 @@ class Generator:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
                 
-                enable_downsample = random.random() < 0.66
-                #enable_downsample = False
+                #enable_downsample = random.random() < 0.0
+                enable_downsample = False
                 
                 if enable_downsample:
                     #dfactor = random.choice([2,3,4])
-                    dfactor = 5
+                    dfactor = 3
                     img_np = np.asarray(img)
                     img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
                     img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_LINEAR)
@@ -152,7 +153,33 @@ class Generator:
                 def invert_image(img: Image):
                     return Image.fromarray(cv2.bitwise_not(np.asarray(img)))
                 
-                if random.random() < 0.5:
+                #size - in pixels, size of motion blur
+                #angel - in degrees, direction of motion blur
+                def apply_motion_blur(image: Image, size, angle):
+                    img = np.asarray(image)
+                    k = np.zeros((size, size), dtype=np.float32)
+                    k[ (size-1)// 2 , :] = np.ones(size, dtype=np.float32)
+                    k = cv2.warpAffine(k, cv2.getRotationMatrix2D( (size / 2 -0.5 , size / 2 -0.5 ) , angle, 1.0), (size, size) )  
+                    k = k * ( 1.0 / np.sum(k) )        
+                    return Image.fromarray(cv2.filter2D(img, -1, k))
+                
+                
+                if random.random() < 0.4:
+                    mb_sz = random.randint(8, 14)
+                    mb_angle = random.randint(0, 360)
+                    img = apply_motion_blur(img, mb_sz, mb_angle)               
+                
+                def add_jpeg_artifact(img: Image):
+                    with io.BytesIO() as buff:
+                        #img.save(buff, format='JPEG', quality=random.randint(15, 35))
+                        img.save(buff, format='JPEG', quality=15)
+                        img = Image.open(buff, formats=["JPEG"]).copy()
+                        return img
+                
+                if random.random() < 0.25:
+                    img = add_jpeg_artifact(img)
+                
+                if random.random() < 0.2:
                     img = invert_image(img)
                     
                 if not self.sensitive:

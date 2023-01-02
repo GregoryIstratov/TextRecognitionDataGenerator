@@ -188,7 +188,8 @@ class FakeTextDataGenerator(object):
         #############################
         def generate_backgound():
             #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
-            c = rnd.randint(0, 7)
+            #c = rnd.randint(0, 7)
+            c = rnd.choice([0, 1, 5, 6, 7])
             #c = 1
             match c:
                 case 0:
