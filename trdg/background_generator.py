@@ -56,8 +56,8 @@ def marble(width: int, height: int, dfactor: int = 1) -> np.ndarray:
     noise: np.array = np.random.uniform(noise_min, noise_max, (noise_height, noise_width))
     image = np.ones((height, width), dtype=np.uint8)
     
-    col_avg = rnd.randint(120, 190)
-    col_dev = 256 - col_avg
+    col_avg = rnd.randint(80, 180)
+    col_dev = 200 - col_avg
     
     for x in range(width):
         for y in range(height):
@@ -79,8 +79,10 @@ def cloud_noise(noise: np.ndarray, width: int, height: int, cloud_size: float) -
             
 
 def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
-    noise_min = 0.25
-    noise_max = 0.75
+    noise_min = 0
+    noise_max = 1
+    col_min = 100
+    col_std = 200 - col_min
     
     def __create_noise(size, inter):        
         noise_width = width // size
@@ -94,10 +96,10 @@ def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
         match type:
             case MyNoise_CLUSTER(size):
                 noise = __create_noise(size, cv2.INTER_NEAREST)
-                return noise * 255
+                return col_min + noise * col_std
             case MyNoise_INTER(size):
                 noise = __create_noise(size, cv2.INTER_LINEAR)
-                return noise * 255
+                return col_min + noise * col_std
             case MyNoise_CLOUD(size, cloud_size):
                 noise_width = width // size
                 noise_height = height // size

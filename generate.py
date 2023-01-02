@@ -148,6 +148,7 @@ class Generator:
                 if enable_downsample:
                     #dfactor = random.choice([2,3,4])
                     dfactor = 5
+                    dfactor = 5
                     img_np = np.asarray(img)
                     img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
                     img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_LINEAR)
@@ -156,6 +157,7 @@ class Generator:
                 def invert_image(img: Image):
                     return Image.fromarray(cv2.bitwise_not(np.asarray(img)))
                 
+                if random.random() < 0.5:
                 if random.random() < 0.5:
                     img = invert_image(img)
                     
@@ -189,10 +191,9 @@ if __name__ == "__main__":
 
     for i in range(100000):
         img, lbl = next(gen)
-        debug(f"Len: {len(lbl)}")
         # cv2.imshow(f"main", np.asarray(img))
         # cv2.waitKey()
-        debug(f"[{i}] Text({len(lbl)}): {lbl}")
+        debug(f"[{i}] {img.size} Text({len(lbl)}): {lbl}")
         
         if create_dataset:
             fname = f"{i}.png"

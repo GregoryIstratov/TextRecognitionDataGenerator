@@ -15,8 +15,8 @@ from PIL import Image, ImageDraw, ImageFont
 import cv2
 
 def debug(msg: str):
-    # dt = time.strftime("%H:%M:%S")
-    # print(f"[{dt}][DBG]: {msg}")
+    dt = time.strftime("%H:%M:%S")
+    print(f"[{dt}][DBG]: {msg}")
     pass
 
 def add_image_noise(image: Image) -> Image:
@@ -69,7 +69,7 @@ def load_dict(path: str) -> List[str]:
         for l in d.read().splitlines():
             if len(l) <= 0:
                 continue
-            word_dict.append(random_upper(l))
+            word_dict.append(l.upper())
 
     return word_dict
 
