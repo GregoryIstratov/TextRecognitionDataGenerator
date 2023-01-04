@@ -14,7 +14,7 @@ from trdg.generators import (
     GeneratorFromGenerator
 )
 
-from trdg.utils import load_fonts, add_image_noise, debug
+from trdg.utils import load_fonts, add_image_noise, apply_random_overexposure, debug
 
 def union_fonts(a: list, b: list):
     a = {str(Path(x).name): x for x in a}
@@ -88,7 +88,7 @@ class Generator:
     distortion_type: int = 0
     random_skew: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 3, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 0, skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -143,15 +143,15 @@ class Generator:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
                 
-                #enable_downsample = random.random() < 0.0
-                enable_downsample = False
+                enable_downsample = random.random() < 0.15
+                #enable_downsample = False
                 
                 if enable_downsample:
                     #dfactor = random.choice([2,3,4])
-                    dfactor = 3
+                    dfactor = 4
                     img_np = np.asarray(img)
                     img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
-                    img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_LINEAR)
+                    img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_NEAREST)
                     img = Image.fromarray(img_np)
                     
                 def invert_image(img: Image):
@@ -167,23 +167,45 @@ class Generator:
                     k = k * ( 1.0 / np.sum(k) )        
                     return Image.fromarray(cv2.filter2D(img, -1, k))
                 
+                def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
+                    x = cv2.getGaussianKernel(dimension_x, sigma_x)
+                    y = cv2.getGaussianKernel(dimension_y, sigma_y)
+                    kernel = x.dot(y.T)
+                    return kernel
+                g_kernel = gaussian_kernel(5, 5, 1, 1)
                 
-                if random.random() < 0.5:
-                    mb_sz = random.randint(10, 15)
+                def apply_sharpen(image: Image):
+                    img = np.asarray(image)
+                    # Create the sharpening kernel
+                    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+                    # Apply the sharpening kernel to the image using filter2D
+                    sharpened = cv2.filter2D(img, -1, kernel)
+                    return Image.fromarray(sharpened)
+                
+                
+                if random.random() < 0.4:
+                    img = apply_sharpen(img)
+                
+                
+                if random.random() < 0.4:
+                    mb_sz = random.randint(10, 13)
                     mb_angle = random.randint(0, 360)
-                    img = apply_motion_blur(img, mb_sz, mb_angle)               
+                    img = apply_motion_blur(img, mb_sz, mb_angle)
+                    
+                if random.random() < 0.3:
+                    img = Image.fromarray(apply_random_overexposure(np.asarray(img)))
                 
                 def add_jpeg_artifact(img: Image):
                     with io.BytesIO() as buff:
                         #img.save(buff, format='JPEG', quality=random.randint(15, 35))
-                        img.save(buff, format='JPEG', quality=15)
+                        img.save(buff, format='JPEG', quality=14)
                         img = Image.open(buff, formats=["JPEG"]).copy()
                         return img
                 
-                if random.random() < 0.25:
+                if random.random() < 0.5:
                     img = add_jpeg_artifact(img)
                 
-                if random.random() < 0.2:
+                if random.random() < 0.4:
                     img = invert_image(img)
                     
                 if not self.sensitive:
@@ -214,7 +236,13 @@ if __name__ == "__main__":
         csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(["filename", "words"])    
 
+    cv2.namedWindow("main")
     for i in range(100000):
+        
+        if cv2.getWindowProperty('main', 0) < 0:
+            print("exit...")
+            break
+            
         img, lbl = next(gen)
         # cv2.imshow(f"main", np.asarray(img))
         # cv2.waitKey()

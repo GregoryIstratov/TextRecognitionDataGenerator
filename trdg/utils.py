@@ -15,9 +15,58 @@ from PIL import Image, ImageDraw, ImageFont
 import cv2
 
 def debug(msg: str):
-    dt = time.strftime("%H:%M:%S")
-    print(f"[{dt}][DBG]: {msg}")
+    #dt = time.strftime("%H:%M:%S")
+    #print(f"[{dt}][DBG]: {msg}")
     pass
+
+
+def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
+    x = cv2.getGaussianKernel(dimension_x, sigma_x)
+    y = cv2.getGaussianKernel(dimension_y, sigma_y)
+    kernel = x.dot(y.T)
+    return kernel
+
+def apply_overexposure(img: np.ndarray, ox: int, oy: int, kw: int, kh: int, angle: int, power: float = 0.15):
+    height, width = img.shape
+
+    ox = min(ox, width-1)
+    oy = min(oy, height-1)
+
+    if ox + kw >= width:
+        kw = width - ox
+        
+    if oy + kh >= height:
+        kh = height - oy
+
+    g_kernel = gaussian_kernel(kh, kw, -1, -1)
+
+    g_kernel = (g_kernel * kw * kh * power ) * 255
+    g_kernel[g_kernel>255] = 255
+    g_kernel = g_kernel.astype(np.uint8)
+
+    m_rot = cv2.getRotationMatrix2D((0 , 0), angle, 1.0)
+    m_rot = cv2.getRotationMatrix2D((kw / 2 -0.5 , kh / 2 -0.5 ), angle, 1.0)
+    m_rot[0, 2] = m_rot[0, 2] + ox
+    m_rot[1, 2] = m_rot[1, 2] + oy
+    mask = cv2.warpAffine(g_kernel, m_rot, (width, height) )  
+
+    img = cv2.add(img, mask)
+    
+    return img
+
+def apply_random_overexposure(img: np.ndarray):
+    h, w = img.shape
+    wm = w // 3
+    hm = h // 3
+    kw = random.randint(wm, w)
+    kh = random.randint(hm, h)
+    oxm = -kw // 2
+    oxmx = w // 1.1
+    ox = random.randint(oxm, oxmx)
+    oy = random.randint(0, h // 2)
+    angle = random.randint(0, 180)
+    debug(f"w={w} h={h} wm={wm} hm={hm} kw={kw} kh={kh} oxm={oxm} oxmx={oxmx} ox={ox} oy={oy} angle={angle}")
+    return apply_overexposure(img, ox=ox, oy=oy, kw=kw, kh=kh, angle=angle)
 
 def add_image_noise(image: Image) -> Image:
     img = np.asarray(image).astype(np.float32)
