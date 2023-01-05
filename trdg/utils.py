@@ -9,14 +9,20 @@ import unicodedata
 from pathlib import Path
 from typing import List, Tuple
 import time
+import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 
 def debug(msg: str):
-    #dt = time.strftime("%H:%M:%S")
-    #print(f"[{dt}][DBG]: {msg}")
+    # dt = time.strftime("%H:%M:%S")
+    # print(f"[{dt}][DBG]: {msg}")
+    pass
+
+def error(msg: str):
+    dt = time.strftime("%H:%M:%S")
+    print(f"[{dt}][ERR]: {msg}", file=sys.stderr)
     pass
 
 
@@ -26,7 +32,7 @@ def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
     kernel = x.dot(y.T)
     return kernel
 
-def apply_overexposure(img: np.ndarray, ox: int, oy: int, kw: int, kh: int, angle: int, power: float = 0.15):
+def apply_overexposure(img: np.ndarray, ox: int, oy: int, kw: int, kh: int, angle: int, power: float = 0.1):
     height, width = img.shape
 
     ox = min(ox, width-1)
@@ -81,7 +87,7 @@ def add_image_noise(image: Image) -> Image:
     #noise = cv2.resize(noise, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
     #noise = cv2.blur(noise, (3,3))
         
-    if len(img.shape) > 2 and img.shape[2] == 3:
+    if len(img.shape) > 2 and (img.shape[2] == 3 or img.shape[2] == 4):
         img[:,:, 0] = img[:,:, 0] * noise
         img[:,:, 1] = img[:,:, 1] * noise
         img[:,:, 2] = img[:,:, 2] * noise

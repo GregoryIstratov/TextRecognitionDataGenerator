@@ -1,11 +1,28 @@
+import io
 import os
 import random as rnd
 
 from PIL import Image, ImageFilter, ImageStat
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
-from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, debug
+from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, apply_random_overexposure, debug, error
 from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD, MyNoise_MARBLE
+
+import numpy as np
+import cv2
+import random as rnd
+from enum import Enum
+
+class DistortType(Enum):
+    NONE = -1
+    TEXT_BLUR = 0
+    TEXT_NOISE = 1
+    BLUR = 2
+    MOTION_BLUR = 3
+    SHARPEN = 4
+    DOWNSAMPLE = 5
+    JPEG_ARTIFACT = 6
+    SIN_COS = 7
 
 try:
     from trdg import handwritten_text_generator
@@ -62,6 +79,21 @@ class FakeTextDataGenerator(object):
         horizontal_margin = margin_left + margin_right
         vertical_margin = margin_top + margin_bottom
 
+        def gen_augs():
+            augs = rnd.sample(population=list(DistortType), k=2)
+            return augs
+        
+        def filter_blurs(augs):
+            blurs = set([DistortType.BLUR, DistortType.MOTION_BLUR, DistortType.TEXT_BLUR])
+            d = set(augs) & blurs
+            if len(d) >= 2:
+                return filter_blurs(gen_augs())
+            else:
+                return augs
+
+        augs = filter_blurs(gen_augs())        
+        debug(f"Augs={augs}")
+        
         ##########################
         # Create picture of text #
         ##########################
@@ -96,8 +128,9 @@ class FakeTextDataGenerator(object):
         #############################
         # Apply distorsion to image #
         #############################
-        if distorsion_type > 0:
-            distorsion_type = rnd.randint(0, 3)
+        distorsion_type = 0
+        if DistortType.SIN_COS in augs:
+            distorsion_type = rnd.randint(1, 3)
         
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
@@ -159,29 +192,21 @@ class FakeTextDataGenerator(object):
         else:
             raise ValueError("Invalid orientation")
         
-        
-        apply_text_noise = rnd.random() < 0.3
-        #apply_text_noise = True
-        
         ################################
         # Apply noise over text image  #
         ################################
         
         text_blur_fact = 0
-        if apply_text_noise:
-            #c = rnd.randint(0, 2)
-            c = 1
-            match c:
-                case 0:
-                    resized_img = add_image_noise(resized_img)
-                case 1:
-                    text_blur_fact = blur if not random_blur else rnd.random() * blur
-                    gaussian_filter = ImageFilter.GaussianBlur(
-                        radius=text_blur_fact
-                    )
-                    resized_img = resized_img.filter(gaussian_filter)
-                case 2:
-                    pass
+        if DistortType.TEXT_BLUR in augs:
+            text_blur_fact = blur if not random_blur else rnd.random() * blur
+            gaussian_filter = ImageFilter.GaussianBlur(
+                radius=text_blur_fact
+            )
+            resized_img = resized_img.filter(gaussian_filter)
+            
+        if DistortType.TEXT_NOISE in augs:
+            resized_img = add_image_noise(resized_img)
+        
 
         #############################
         # Generate background image #
@@ -242,14 +267,15 @@ class FakeTextDataGenerator(object):
 
             debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
             if df < 15:
-                print("value of mean pixel is too similar. Ignore this image")
+                debug("value of mean pixel is too similar. Ignore this image")
 
-                print("resized_img_st \n {}".format(resized_img_st.mean))
-                print("background_img_st \n {}".format(background_img_st.mean))
+                debug("resized_img_st \n {}".format(resized_img_st.mean))
+                debug("background_img_st \n {}".format(background_img_st.mean))
 
-                #return
+                return
         except Exception as err:
-            return
+            #error(f"Exception: {str(err)}")
+            raise err
 
         #############################
         # Place text with alignment #
@@ -287,20 +313,85 @@ class FakeTextDataGenerator(object):
 
         background_img = background_img.convert(image_mode)
         background_mask = background_mask.convert(image_mode)
-
+        
+        final_image = background_img
+        final_mask = background_mask        
+            
+        def downsample(img: Image):
+            #dfactor = random.choice([2,3,4])
+            dfactor = 4
+            img_np = np.asarray(img)
+            img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
+            img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_NEAREST)
+            return Image.fromarray(img_np)
+            
+        def invert_image(img: Image):
+            return Image.fromarray(cv2.bitwise_not(np.asarray(img)))
+        
+        #size - in pixels, size of motion blur
+        #angel - in degrees, direction of motion blur
+        def apply_motion_blur(image: Image, size, angle):
+            img = np.asarray(image)
+            k = np.zeros((size, size), dtype=np.float32)
+            k[ (size-1)// 2 , :] = np.ones(size, dtype=np.float32)
+            k = cv2.warpAffine(k, cv2.getRotationMatrix2D( (size / 2 -0.5 , size / 2 -0.5 ) , angle, 1.0), (size, size) )  
+            k = k * ( 1.0 / np.sum(k) )        
+            return Image.fromarray(cv2.filter2D(img, -1, k))
+        
+        def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
+            x = cv2.getGaussianKernel(dimension_x, sigma_x)
+            y = cv2.getGaussianKernel(dimension_y, sigma_y)
+            kernel = x.dot(y.T)
+            return kernel
+        g_kernel = gaussian_kernel(5, 5, 1, 1)
+        
+        def apply_sharpen(image: Image):
+            img = np.asarray(image)
+            # Create the sharpening kernel
+            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+            # Apply the sharpening kernel to the image using filter2D
+            sharpened = cv2.filter2D(img, -1, kernel)
+            return Image.fromarray(sharpened)
+        
+        def add_jpeg_artifact(img: Image):
+            with io.BytesIO() as buff:
+                #img.save(buff, format='JPEG', quality=random.randint(15, 35))
+                img.save(buff, format='JPEG', quality=12)
+                img = Image.open(buff, formats=["JPEG"]).copy()
+                return img                
+        
+        if DistortType.SHARPEN in augs:
+            final_image = apply_sharpen(final_image)
+                    
+        if DistortType.MOTION_BLUR in augs:
+            mb_sz = rnd.randint(10, 14)
+            mb_angle = rnd.randint(0, 360)
+            final_image = apply_motion_blur(final_image, mb_sz, mb_angle)
+            
+        if DistortType.JPEG_ARTIFACT in augs:
+            final_image = add_jpeg_artifact(final_image)
+            
+        if DistortType.DOWNSAMPLE in augs:
+            final_image = downsample(final_image)            
+                        
+        if rnd.random() < 0.3:
+            final_image = invert_image(final_image)                                
+            
         #######################
         # Apply gaussian blur #
         #######################
 
-        if not apply_text_noise:
+        if DistortType.BLUR in augs:
             gaussian_filter = ImageFilter.GaussianBlur(
                 radius=blur if not random_blur else rnd.random() * blur
             )
-            final_image = background_img.filter(gaussian_filter)
-            final_mask = background_mask.filter(gaussian_filter)
-        else:
-            final_image = background_img
-            final_mask = background_mask
+            final_image = final_image.filter(gaussian_filter)
+            final_mask = final_mask.filter(gaussian_filter) 
+            
+        if rnd.random() < 0.5:
+            n = rnd.randint(1, 3)
+            for i in range(n):
+                final_image = Image.fromarray(apply_random_overexposure(np.asarray(final_image)))
 
         #####################################
         # Generate name for resulting image #

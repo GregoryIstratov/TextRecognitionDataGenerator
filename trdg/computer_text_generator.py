@@ -5,6 +5,8 @@ from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 from trdg.utils import get_text_width, get_text_height, debug
 from trdg.meta_image import MetaImage
 
+import shutil
+
 # Thai Unicode reference: https://jrgraphix.net/r/Unicode/0E00-0E7F
 TH_TONE_MARKS = [
     "0xe47",
@@ -111,7 +113,14 @@ def _generate_horizontal_text(
     if not word_split:
         text_width += character_spacing * (len(text) - 1)
 
-    text_height = max([get_text_height(image_font, p) for p in splitted_text])
+    text_height = 0
+    try:
+        text_height = max([get_text_height(image_font, p) for p in splitted_text])
+    except OSError as err:
+        dst_dir = "/home/greg/EasyOCR/trainer/TextRecognitionDataGenerator/trdg/fonts/invalid"
+        print(f"Bad font {font}")
+        shutil.move(font, dst_dir)
+        raise err
 
     txt_img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
     txt_mask = Image.new("RGB", (text_width, text_height), (0, 0, 0))

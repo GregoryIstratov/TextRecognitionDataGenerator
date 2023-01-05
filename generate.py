@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import csv
 from PIL import Image
+import traceback
 
 from trdg.generators import (
     GeneratorFromDict,
@@ -88,7 +89,7 @@ class Generator:
     distortion_type: int = 0
     random_skew: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 0, skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 3, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -111,8 +112,8 @@ class Generator:
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
-        self.generator_sym = GeneratorFromRandom(count=-1, length=self.length, allow_variable=True, fonts=self.fonts_all, language="en",
-                                                use_letters=False, size=self.height, random_blur=True, blur=self.blur, 
+        self.generator_sym = GeneratorFromRandom(count=-1, length=self.length + 2, allow_variable=True, fonts=self.fonts_all, language="ru",
+                                                use_letters=True, size=self.height, random_blur=True, blur=self.blur, 
                                                 skewing_angle=self.skew_angle, random_skew=self.random_skew, 
                                                 distorsion_type=self.distortion_type,
                                                 image_mode=self.image_mode
@@ -142,78 +143,14 @@ class Generator:
                 if img is None:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
-                
-                enable_downsample = random.random() < 0.15
-                #enable_downsample = False
-                
-                if enable_downsample:
-                    #dfactor = random.choice([2,3,4])
-                    dfactor = 4
-                    img_np = np.asarray(img)
-                    img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
-                    img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_NEAREST)
-                    img = Image.fromarray(img_np)
-                    
-                def invert_image(img: Image):
-                    return Image.fromarray(cv2.bitwise_not(np.asarray(img)))
-                
-                #size - in pixels, size of motion blur
-                #angel - in degrees, direction of motion blur
-                def apply_motion_blur(image: Image, size, angle):
-                    img = np.asarray(image)
-                    k = np.zeros((size, size), dtype=np.float32)
-                    k[ (size-1)// 2 , :] = np.ones(size, dtype=np.float32)
-                    k = cv2.warpAffine(k, cv2.getRotationMatrix2D( (size / 2 -0.5 , size / 2 -0.5 ) , angle, 1.0), (size, size) )  
-                    k = k * ( 1.0 / np.sum(k) )        
-                    return Image.fromarray(cv2.filter2D(img, -1, k))
-                
-                def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
-                    x = cv2.getGaussianKernel(dimension_x, sigma_x)
-                    y = cv2.getGaussianKernel(dimension_y, sigma_y)
-                    kernel = x.dot(y.T)
-                    return kernel
-                g_kernel = gaussian_kernel(5, 5, 1, 1)
-                
-                def apply_sharpen(image: Image):
-                    img = np.asarray(image)
-                    # Create the sharpening kernel
-                    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-                    # Apply the sharpening kernel to the image using filter2D
-                    sharpened = cv2.filter2D(img, -1, kernel)
-                    return Image.fromarray(sharpened)
-                
-                
-                if random.random() < 0.4:
-                    img = apply_sharpen(img)
-                
-                
-                if random.random() < 0.4:
-                    mb_sz = random.randint(10, 13)
-                    mb_angle = random.randint(0, 360)
-                    img = apply_motion_blur(img, mb_sz, mb_angle)
-                    
-                if random.random() < 0.3:
-                    img = Image.fromarray(apply_random_overexposure(np.asarray(img)))
-                
-                def add_jpeg_artifact(img: Image):
-                    with io.BytesIO() as buff:
-                        #img.save(buff, format='JPEG', quality=random.randint(15, 35))
-                        img.save(buff, format='JPEG', quality=14)
-                        img = Image.open(buff, formats=["JPEG"]).copy()
-                        return img
-                
-                if random.random() < 0.5:
-                    img = add_jpeg_artifact(img)
-                
-                if random.random() < 0.4:
-                    img = invert_image(img)
                     
                 if not self.sensitive:
                     lbl = lbl.upper()
                 
                 return img, lbl
             except Exception as e:
-                print(f"[TextGenerator] Failed to get new sample: {str(e)}")
+                print(f"[TextGenerator] Failed to get new sample: \n{traceback.format_exc()}")
+                
 
 
 if __name__ == "__main__":
