@@ -214,7 +214,7 @@ class FakeTextDataGenerator(object):
         def generate_backgound():
             #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
             #c = rnd.randint(0, 7)
-            c = rnd.choice([0, 1, 5, 6, 7])
+            c = rnd.choice([0, 1, 4, 5, 6, 7])
             #c = 1
             match c:
                 case 0:
@@ -338,13 +338,6 @@ class FakeTextDataGenerator(object):
             k = k * ( 1.0 / np.sum(k) )        
             return Image.fromarray(cv2.filter2D(img, -1, k))
         
-        def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
-            x = cv2.getGaussianKernel(dimension_x, sigma_x)
-            y = cv2.getGaussianKernel(dimension_y, sigma_y)
-            kernel = x.dot(y.T)
-            return kernel
-        g_kernel = gaussian_kernel(5, 5, 1, 1)
-        
         def apply_sharpen(image: Image):
             img = np.asarray(image)
             # Create the sharpening kernel
@@ -364,7 +357,7 @@ class FakeTextDataGenerator(object):
             final_image = apply_sharpen(final_image)
                     
         if DistortType.MOTION_BLUR in augs:
-            mb_sz = rnd.randint(10, 14)
+            mb_sz = rnd.randint(10, 15)
             mb_angle = rnd.randint(0, 360)
             final_image = apply_motion_blur(final_image, mb_sz, mb_angle)
             

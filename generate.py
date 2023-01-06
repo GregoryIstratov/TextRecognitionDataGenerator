@@ -89,7 +89,7 @@ class Generator:
     distortion_type: int = 0
     random_skew: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 3, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, height: int = 64, blur: float = 4, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
         self.skew_angle = skew_angle
@@ -149,7 +149,8 @@ class Generator:
                 
                 return img, lbl
             except Exception as e:
-                print(f"[TextGenerator] Failed to get new sample: \n{traceback.format_exc()}")
+                #print(f"[TextGenerator] Failed to get new sample: \n{traceback.format_exc()}")
+                print(f"[TextGenerator] Failed to get new sample: {e}")
                 
 
 
