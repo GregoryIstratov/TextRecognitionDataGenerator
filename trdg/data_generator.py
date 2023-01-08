@@ -1,11 +1,12 @@
 import io
 import os
 import random as rnd
+import traceback
 
 from PIL import Image, ImageFilter, ImageStat
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
-from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, apply_random_overexposure, debug, error
+from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, apply_random_overexposure, debug, error, AttrDict
 from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD, MyNoise_MARBLE
 
 import numpy as np
@@ -72,26 +73,64 @@ class FakeTextDataGenerator(object):
         stroke_fill: str = "#282828",
         image_mode: str = "RGB",
         output_bboxes: int = 0,
+        aug_opts: dict = {}
     ) -> Image:
         image = None
 
+        if len(aug_opts) == 0:
+            raise RuntimeError("Aug opts are empty")
+        
+        aug_opts = AttrDict(aug_opts)
         margin_top, margin_left, margin_bottom, margin_right = margins
         horizontal_margin = margin_left + margin_right
         vertical_margin = margin_top + margin_bottom
-
-        def gen_augs():
-            augs = rnd.sample(population=list(DistortType), k=2)
+        
+        def get_enabled_augs(aug_opts: dict) -> list[DistortType]:
+            def str2aug(s: str):
+                match s.lower():
+                    case "text_blur":
+                        return DistortType.TEXT_BLUR
+                    case "text_noise":
+                        return DistortType.TEXT_NOISE
+                    case "blur":
+                        return DistortType.BLUR
+                    case "motion_blur":
+                        return DistortType.MOTION_BLUR
+                    case "sharpen":
+                        return DistortType.SHARPEN
+                    case "downsample":
+                        return DistortType.DOWNSAMPLE
+                    case "jpeg_artifact":
+                        return DistortType.JPEG_ARTIFACT
+                    case "sin_cos":
+                        return DistortType.SIN_COS
+                    case _:
+                        raise RuntimeError(f"Unknown augmentation type '{s}'")
+                    
+            ss: list[str] = aug_opts.allow_list
+            
+            if "all" in ss:
+                return list(DistortType)
+            
+            augs = [str2aug(s) for s in ss]
+            augs.insert(0, DistortType.NONE)
+            return augs
+                
+        def gen_augs(allowed_augs, k):
+            augs = rnd.sample(population=allowed_augs, k=k)
             return augs
         
         def filter_blurs(augs):
             blurs = set([DistortType.BLUR, DistortType.MOTION_BLUR, DistortType.TEXT_BLUR])
             d = set(augs) & blurs
             if len(d) >= 2:
-                return filter_blurs(gen_augs())
+                return filter_blurs(gen_augs(get_enabled_augs(aug_opts), aug_opts.k))
             else:
                 return augs
 
-        augs = filter_blurs(gen_augs())        
+        augs = filter_blurs(gen_augs(get_enabled_augs(aug_opts), aug_opts.k))
+
+        
         debug(f"Augs={augs}")
         
         ##########################
@@ -198,7 +237,8 @@ class FakeTextDataGenerator(object):
         
         text_blur_fact = 0
         if DistortType.TEXT_BLUR in augs:
-            text_blur_fact = blur if not random_blur else rnd.random() * blur
+            text_blur_fact = aug_opts.text_blur if not aug_opts.text_blur_rnd else rnd.random() * aug_opts.text_blur
+            #text_blur_fact = blur if not random_blur else rnd.random() * blur
             gaussian_filter = ImageFilter.GaussianBlur(
                 radius=text_blur_fact
             )
@@ -214,8 +254,19 @@ class FakeTextDataGenerator(object):
         def generate_backgound():
             #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
             #c = rnd.randint(0, 7)
-            c = rnd.choice([0, 1, 4, 5, 6, 7])
-            #c = 1
+            w = aug_opts.inp_weights
+            type = rnd.choices(population=["image", "noise", "plain"], weights=w, k=1)[0]
+            
+            c = -1
+            match type:
+                case "image":
+                    c = 3
+                case "noise":
+                    c = rnd.choice([0, 4, 5, 6, 7])
+                case "plain":
+                    c = 1                    
+                    
+            #c = 3
             match c:
                 case 0:
                     return background_generator.gaussian_noise(
@@ -229,13 +280,10 @@ class FakeTextDataGenerator(object):
                     return background_generator.quasicrystal(
                         background_height, background_width
                     )
-                case 3:
-                    return background_generator.quasicrystal(
-                        background_height, background_width
-                    )                    
-                    # return background_generator.image(
-                    #     background_height, background_width, image_dir
-                    # )
+                case 3:                
+                    return background_generator.image(
+                        background_height, background_width, image_dir
+                    )
                 case 4:
                     return background_generator.my_noise(background_height, background_width, MyNoise_CLUSTER(12))
                 case 5:
@@ -257,25 +305,26 @@ class FakeTextDataGenerator(object):
         ##############################################################
         # Comparing average pixel value of text and background image #
         ##############################################################
-        try:
-            resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
-            background_img_st = ImageStat.Stat(background_img)
+        if 0:
+            try:
+                resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
+                background_img_st = ImageStat.Stat(background_img)
 
-            resized_img_px_mean = sum(resized_img_st.mean[:3]) / 3
-            background_img_px_mean = sum(background_img_st.mean[:3]) / 3
-            df = abs(resized_img_px_mean - background_img_px_mean)
+                resized_img_px_mean = sum(resized_img_st.mean[:3]) / 3
+                background_img_px_mean = sum(background_img_st.mean[:3]) / 3
+                df = abs(resized_img_px_mean - background_img_px_mean)
 
-            debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
-            if df < 15:
-                debug("value of mean pixel is too similar. Ignore this image")
+                debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
+                if df < 15:
+                    debug("value of mean pixel is too similar. Ignore this image")
 
-                debug("resized_img_st \n {}".format(resized_img_st.mean))
-                debug("background_img_st \n {}".format(background_img_st.mean))
+                    debug("resized_img_st \n {}".format(resized_img_st.mean))
+                    debug("background_img_st \n {}".format(background_img_st.mean))
 
-                return
-        except Exception as err:
-            #error(f"Exception: {str(err)}")
-            raise err
+                    return
+            except Exception as err:
+                #error(f"Exception: {str(err)}")
+                raise err
 
         #############################
         # Place text with alignment #
@@ -319,7 +368,7 @@ class FakeTextDataGenerator(object):
             
         def downsample(img: Image):
             #dfactor = random.choice([2,3,4])
-            dfactor = 4
+            dfactor = aug_opts.downsample_factor
             img_np = np.asarray(img)
             img_ds = cv2.resize(img_np, dsize=(img_np.shape[1] // dfactor, img_np.shape[0] // dfactor), interpolation=cv2.INTER_NEAREST)
             img_np = cv2.resize(img_ds, dsize=(img_np.shape[1], img_np.shape[0]), interpolation=cv2.INTER_NEAREST)
@@ -349,7 +398,7 @@ class FakeTextDataGenerator(object):
         def add_jpeg_artifact(img: Image):
             with io.BytesIO() as buff:
                 #img.save(buff, format='JPEG', quality=random.randint(15, 35))
-                img.save(buff, format='JPEG', quality=12)
+                img.save(buff, format='JPEG', quality=aug_opts.jpeg_artifact_q)
                 img = Image.open(buff, formats=["JPEG"]).copy()
                 return img                
         
@@ -357,7 +406,9 @@ class FakeTextDataGenerator(object):
             final_image = apply_sharpen(final_image)
                     
         if DistortType.MOTION_BLUR in augs:
-            mb_sz = rnd.randint(10, 15)
+            mn = aug_opts.motion_blur_sz_min
+            mx = aug_opts.motion_blur_sz_max
+            mb_sz = rnd.randint(mn, mx)
             mb_angle = rnd.randint(0, 360)
             final_image = apply_motion_blur(final_image, mb_sz, mb_angle)
             
@@ -367,7 +418,7 @@ class FakeTextDataGenerator(object):
         if DistortType.DOWNSAMPLE in augs:
             final_image = downsample(final_image)            
                         
-        if rnd.random() < 0.3:
+        if rnd.random() < aug_opts.invert_chance:
             final_image = invert_image(final_image)                                
             
         #######################
@@ -375,14 +426,15 @@ class FakeTextDataGenerator(object):
         #######################
 
         if DistortType.BLUR in augs:
+            blur_fact = aug_opts.blur if not aug_opts.blur_rnd else rnd.random() * aug_opts.blur
             gaussian_filter = ImageFilter.GaussianBlur(
-                radius=blur if not random_blur else rnd.random() * blur
+                radius=blur_fact
             )
             final_image = final_image.filter(gaussian_filter)
             final_mask = final_mask.filter(gaussian_filter) 
             
-        if rnd.random() < 0.5:
-            n = rnd.randint(1, 3)
+        if rnd.random() < aug_opts.overexposure_chance:
+            n = rnd.randint(1, aug_opts.overexposure_k)
             for i in range(n):
                 final_image = Image.fromarray(apply_random_overexposure(np.asarray(final_image)))
 

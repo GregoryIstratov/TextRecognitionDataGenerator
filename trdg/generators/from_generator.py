@@ -45,6 +45,7 @@ class GeneratorFromGenerator:
         image_mode: str = "RGB",
         output_bboxes: int = 0,
         rtl: bool = False,
+        aug_opts: dict = {}
     ):
         self.generator = generator
         self.fonts = fonts
@@ -88,6 +89,7 @@ class GeneratorFromGenerator:
         self.stroke_width = stroke_width
         self.stroke_fill = stroke_fill
         self.image_mode = image_mode
+        self.aug_opts = aug_opts
 
     def __iter__(self):
         return self
@@ -132,6 +134,7 @@ class GeneratorFromGenerator:
                 self.stroke_fill,
                 self.image_mode,
                 self.output_bboxes,
+                self.aug_opts
             ),
             text
         )

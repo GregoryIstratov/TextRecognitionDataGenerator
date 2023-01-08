@@ -45,10 +45,12 @@ class GeneratorFromDict:
         output_bboxes: int = 0,
         path: str = "",
         rtl: bool = False,
+        aug_opts: dict = {},
     ):
         self.count = count
         self.length = length
         self.allow_variable = allow_variable
+        self.aug_opts = aug_opts
 
         if path == "":
             self.dict = load_dict(
@@ -94,6 +96,7 @@ class GeneratorFromDict:
             image_mode,
             output_bboxes,
             rtl,
+            self.aug_opts
         )
 
     def __iter__(self):

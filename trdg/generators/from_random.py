@@ -46,6 +46,7 @@ class GeneratorFromRandom:
         stroke_fill: str = "#282828",
         image_mode: str = "RGB",
         output_bboxes: int = 0,
+        aug_opts: dict = {},
     ):
         self.generated_count = 0
         self.count = count
@@ -55,6 +56,7 @@ class GeneratorFromRandom:
         self.use_numbers = use_numbers
         self.use_symbols = use_symbols
         self.language = language
+        self.aug_opts = aug_opts
 
         self.batch_size = min(max(count, 1), 1000)
         self.steps_until_regeneration = self.batch_size
@@ -95,6 +97,7 @@ class GeneratorFromRandom:
             stroke_fill,
             image_mode,
             output_bboxes,
+            self.aug_opts
         )
 
     def __iter__(self):

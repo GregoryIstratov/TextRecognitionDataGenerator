@@ -25,6 +25,10 @@ def error(msg: str):
     print(f"[{dt}][ERR]: {msg}", file=sys.stderr)
     pass
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 def gaussian_kernel(dimension_x, dimension_y, sigma_x, sigma_y):
     x = cv2.getGaussianKernel(dimension_x, sigma_x)

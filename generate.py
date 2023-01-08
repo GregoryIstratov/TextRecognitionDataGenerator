@@ -1,6 +1,7 @@
 import io
 from pathlib import Path
 import random
+import string
 import numpy as np
 import cv2
 import csv
@@ -35,35 +36,25 @@ def random_numeric_string():
         return s
         
     def gen2():
-        a = random.randint(0, 99)
-        b = random.randint(0, 99)
-        c = random.randint(100000, 999999)
-        
-        if random.random() < 0.2:    
-            s = f"{a:02d} {b:02d} {c:06d}"
-        else:
-            s = f"{a:02d} {b:02d} {c:06d}"
-        
-        return s
+        return ''.join(random.choices(population='0123456789.', k=random.randint(8,32))).strip()
         
     def gen3():
-        a = random.randint(10, 999)
-        b = random.randint(10, 999)
-        
-        s = f"{a:03d}-{b:03d}"
-        
-        return s
+        return ''.join(random.choices(population=(string.ascii_uppercase*3 + '0123456789'*3 + 
+                                                  "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ №"), k=random.randint(8,32))).strip()
     
     def gen4():
-        a = random.randint(10, 999)
-        b = random.randint(10, 999)
-        c = random.randint(100000, 999999)
-        
-        s = f"{a:03d},{b:03d}: ({c:06d})"
-        
-        return s    
+        return ''.join(random.choices(population='0123456789 №', k=random.randint(8,32))).strip()
     
-    f = [gen1, gen2, gen3, gen4]
+    def gen5():
+        return ''.join(random.choices(population='0123456789 ', k=random.randint(8,32))).strip()
+    
+    def gen6():
+        return ''.join(random.choices(population=(string.ascii_uppercase+ ' '), k=random.randint(8,32))).strip()
+    
+    def gen7():
+        return ''.join(random.choices(population="ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ ", k=random.randint(8,32))).strip()
+    
+    f = [gen1, gen2, gen3, gen4, gen5, gen6, gen7]
     
     c = random.randint(0, len(f) - 1)
         
@@ -91,7 +82,7 @@ class Generator:
     random_blur: bool = False
 
     def __init__(self, max_len: int = -1, height: int = 64, blur: float = 1, random_blur: bool = True,
-                 skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
+                 skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False, aug_opts: dict = {}) -> None:
         self.height = height
         self.blur = blur
         self.random_blur = random_blur
@@ -100,6 +91,11 @@ class Generator:
         self.rgb = rgb
         self.sensitive = sensitive
         self.max_len = max_len
+        self.image_dir = Path(__file__).parent / "trdg" / "images"
+        self.aug_opts = aug_opts
+        
+        if len(self.aug_opts) == 0:
+            raise RuntimeError("aug_options are empty")
         
         if not self.rgb:
             self.image_mode = 'L'
@@ -110,10 +106,12 @@ class Generator:
         self.fonts_en = load_fonts('en')
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
-        self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
+        self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_ru, size=self.height, 
                                                     random_blur=self.random_blur, blur=self.blur, skewing_angle=self.skew_angle, 
-                                                    random_skew=self.random_skew, 
-                                                    distorsion_type=self.distortion_type, image_mode=self.image_mode)
+                                                    random_skew=self.random_skew,
+                                                    image_dir=self.image_dir,
+                                                    distorsion_type=self.distortion_type, image_mode=self.image_mode,
+                                                    aug_opts=self.aug_opts)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
@@ -121,7 +119,9 @@ class Generator:
                                                 use_letters=True, size=self.height, random_blur=self.random_blur, blur=self.blur, 
                                                 skewing_angle=self.skew_angle, random_skew=self.random_skew, 
                                                 distorsion_type=self.distortion_type,
-                                                image_mode=self.image_mode
+                                                image_dir=self.image_dir,
+                                                image_mode=self.image_mode,
+                                                aug_opts=self.aug_opts
                                                 )
         
         #self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
@@ -136,7 +136,9 @@ class Generator:
                                     random_skew=self.random_skew,
                                     distorsion_type=self.distortion_type,                                
                                     size=height,
-                                    image_mode=self.image_mode
+                                    image_dir=self.image_dir,
+                                    image_mode=self.image_mode,
+                                    aug_opts=self.aug_opts
                                     )       
     def __next__(self):
         while True:
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     create_dataset = False
     benchmark = False
 
-    dataset_root = Path("~/text_dataset_100k_new")
+    dataset_root = Path("text_dataset_100k_new")
     dataset_root.mkdir(exist_ok=True, parents=True)
     
     if benchmark:
