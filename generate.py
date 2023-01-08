@@ -88,14 +88,18 @@ class Generator:
     image_mode: str
     distortion_type: int = 0
     random_skew: bool = False
+    random_blur: bool = False
 
-    def __init__(self, height: int = 64, blur: float = 4, skew_angle: int = 0, length: int = 3, rgb: bool = False, sensitive: bool = False) -> None:
+    def __init__(self, max_len: int = -1, height: int = 64, blur: float = 1, random_blur: bool = True,
+                 skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False) -> None:
         self.height = height
         self.blur = blur
+        self.random_blur = random_blur
         self.skew_angle = skew_angle
         self.length = length
         self.rgb = rgb
         self.sensitive = sensitive
+        self.max_len = max_len
         
         if not self.rgb:
             self.image_mode = 'L'
@@ -107,13 +111,14 @@ class Generator:
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
         self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_all, size=self.height, 
-                                                    random_blur=True, blur=self.blur, skewing_angle=self.skew_angle, random_skew=self.random_skew, 
+                                                    random_blur=self.random_blur, blur=self.blur, skewing_angle=self.skew_angle, 
+                                                    random_skew=self.random_skew, 
                                                     distorsion_type=self.distortion_type, image_mode=self.image_mode)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
         self.generator_sym = GeneratorFromRandom(count=-1, length=self.length + 2, allow_variable=True, fonts=self.fonts_all, language="ru",
-                                                use_letters=True, size=self.height, random_blur=True, blur=self.blur, 
+                                                use_letters=True, size=self.height, random_blur=self.random_blur, blur=self.blur, 
                                                 skewing_angle=self.skew_angle, random_skew=self.random_skew, 
                                                 distorsion_type=self.distortion_type,
                                                 image_mode=self.image_mode
@@ -126,7 +131,7 @@ class Generator:
         
     def __create_dict_generator(self, lang: str, height: int, fonts: list[str]):
         return GeneratorFromDict(count=-1, fonts=fonts, length=self.length, language=lang, 
-                                    random_blur=True, blur=self.blur, allow_variable=True,
+                                    random_blur=self.random_blur, blur=self.blur, allow_variable=True,
                                     skewing_angle=self.skew_angle,
                                     random_skew=self.random_skew,
                                     distorsion_type=self.distortion_type,                                
@@ -146,6 +151,9 @@ class Generator:
                     
                 if not self.sensitive:
                     lbl = lbl.upper()
+                    
+                if self.max_len != -1 and len(lbl) > self.max_len:
+                    continue
                 
                 return img, lbl
             except Exception as e:
