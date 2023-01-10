@@ -104,6 +104,8 @@ class FakeTextDataGenerator(object):
                         return DistortType.JPEG_ARTIFACT
                     case "sin_cos":
                         return DistortType.SIN_COS
+                    case "none":
+                        return DistortType.NONE
                     case _:
                         raise RuntimeError(f"Unknown augmentation type '{s}'")
                     
@@ -113,7 +115,6 @@ class FakeTextDataGenerator(object):
                 return list(DistortType)
             
             augs = [str2aug(s) for s in ss]
-            augs.insert(0, DistortType.NONE)
             return augs
                 
         def gen_augs(allowed_augs, k):
