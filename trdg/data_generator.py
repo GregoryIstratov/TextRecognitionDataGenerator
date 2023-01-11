@@ -24,6 +24,7 @@ class DistortType(Enum):
     DOWNSAMPLE = 5
     JPEG_ARTIFACT = 6
     SIN_COS = 7
+    NOISE = 8
 
 try:
     from trdg import handwritten_text_generator
@@ -104,6 +105,8 @@ class FakeTextDataGenerator(object):
                         return DistortType.JPEG_ARTIFACT
                     case "sin_cos":
                         return DistortType.SIN_COS
+                    case "noise":
+                        return DistortType.NOISE
                     case "none":
                         return DistortType.NONE
                     case _:
@@ -402,9 +405,18 @@ class FakeTextDataGenerator(object):
                 img.save(buff, format='JPEG', quality=aug_opts.jpeg_artifact_q)
                 img = Image.open(buff, formats=["JPEG"]).copy()
                 return img                
-        
-        if DistortType.SHARPEN in augs:
-            final_image = apply_sharpen(final_image)
+            
+        #######################
+        # Apply augmentations #
+        #######################
+
+        if DistortType.BLUR in augs:
+            blur_fact = aug_opts.blur if not aug_opts.blur_rnd else (0.25 + rnd.random() * 0.75) * aug_opts.blur
+            gaussian_filter = ImageFilter.GaussianBlur(
+                radius=blur_fact
+            )
+            final_image = final_image.filter(gaussian_filter)
+            final_mask = final_mask.filter(gaussian_filter)             
                     
         if DistortType.MOTION_BLUR in augs:
             mn = aug_opts.motion_blur_sz_min
@@ -417,22 +429,16 @@ class FakeTextDataGenerator(object):
             final_image = add_jpeg_artifact(final_image)
             
         if DistortType.DOWNSAMPLE in augs:
-            final_image = downsample(final_image)            
+            final_image = downsample(final_image)
+            
+        if DistortType.SHARPEN in augs:
+            final_image = apply_sharpen(final_image)
+            
+        if DistortType.NOISE in augs:
+            final_image = add_image_noise(final_image, mean=aug_opts.noise_mean, stddev=aug_opts.noise_stddev)                 
                         
         if rnd.random() < aug_opts.invert_chance:
             final_image = invert_image(final_image)                                
-            
-        #######################
-        # Apply gaussian blur #
-        #######################
-
-        if DistortType.BLUR in augs:
-            blur_fact = aug_opts.blur if not aug_opts.blur_rnd else rnd.random() * aug_opts.blur
-            gaussian_filter = ImageFilter.GaussianBlur(
-                radius=blur_fact
-            )
-            final_image = final_image.filter(gaussian_filter)
-            final_mask = final_mask.filter(gaussian_filter) 
             
         if rnd.random() < aug_opts.overexposure_chance:
             n = rnd.randint(1, aug_opts.overexposure_k)

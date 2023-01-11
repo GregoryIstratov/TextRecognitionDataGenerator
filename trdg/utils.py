@@ -78,7 +78,7 @@ def apply_random_overexposure(img: np.ndarray):
     debug(f"w={w} h={h} wm={wm} hm={hm} kw={kw} kh={kh} oxm={oxm} oxmx={oxmx} ox={ox} oy={oy} angle={angle}")
     return apply_overexposure(img, ox=ox, oy=oy, kw=kw, kh=kh, angle=angle)
 
-def add_image_noise(image: Image) -> Image:
+def add_image_noise(image: Image, mean=1, stddev=0.2) -> Image:
     img = np.asarray(image).astype(np.float32)
     
     #c = random.randint(1, 1)
@@ -98,7 +98,7 @@ def add_image_noise(image: Image) -> Image:
     else:
         img = img * noise
     
-    #img[img>255] = 255
+    img[img>255] = 255
     return Image.fromarray(img.astype(np.uint8))
 
 
