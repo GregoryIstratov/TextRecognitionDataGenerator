@@ -23,11 +23,11 @@ class TrdgServicer(trdg_pb2_grpc.TrdgServicer):
         return response
 
 
-def serve(gen):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
+def serve(gen, port: int = 50051, max_workers: int = 1):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
     trdg_pb2_grpc.add_TrdgServicer_to_server(
         TrdgServicer(gen), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port(f'[::]:{port}')
     server.start()
     server.wait_for_termination()
     

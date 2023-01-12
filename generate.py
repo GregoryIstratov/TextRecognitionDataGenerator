@@ -16,7 +16,7 @@ from trdg.generators import (
     GeneratorFromGenerator
 )
 
-from trdg.utils import load_fonts, add_image_noise, apply_random_overexposure, debug
+from trdg.utils import load_fonts, add_image_noise, apply_random_overexposure, debug, AttrDict
 
 def union_fonts(a: list, b: list):
     a = {str(Path(x).name): x for x in a}
@@ -25,44 +25,33 @@ def union_fonts(a: list, b: list):
     r = [x for x in c.values()]
     return r
 
-def random_numeric_string():  
+def random_numeric_string(symbols):  
+    # def gen1():
+    #     d = random.randint(0, 99)
+    #     m = random.randint(0, 99)
+    #     y = random.randint(0, 9999)
+        
+    #     s = f"{d:02d}.{m:02d}.{y:04d}"
+        
+    #     return s
+        
     def gen1():
-        d = random.randint(0, 99)
-        m = random.randint(0, 99)
-        y = random.randint(0, 9999)
-        
-        s = f"{d:02d}.{m:02d}.{y:04d}"
-        
-        return s
-        
+        return ''.join(random.choices(population=(string.ascii_uppercase*3 + '0123456789'*3 + symbols), 
+                                      k=random.randint(8,32))).strip()
+    
     def gen2():
-        return ''.join(random.choices(population='0123456789.', k=random.randint(8,32))).strip()
-        
-    def gen3():
-        return ''.join(random.choices(population=(string.ascii_uppercase*3 + '0123456789'*3 + 
-                                                  "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ №"), k=random.randint(8,32))).strip()
+        return ''.join(random.choices(population=("ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ"*3 + '0123456789'*3 + symbols), 
+                                      k=random.randint(8,32))).strip()
     
-    def gen4():
-        return ''.join(random.choices(population='0123456789 №', k=random.randint(8,32))).strip()
-    
-    def gen5():
-        return ''.join(random.choices(population='0123456789 ', k=random.randint(8,32))).strip()
-    
-    def gen6():
-        return ''.join(random.choices(population=(string.ascii_uppercase+ ' '), k=random.randint(8,32))).strip()
-    
-    def gen7():
-        return ''.join(random.choices(population="ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ ", k=random.randint(8,32))).strip()
-    
-    f = [gen1, gen2, gen3, gen4, gen5, gen6, gen7]
+    f = [gen1, gen2]
     
     c = random.randint(0, len(f) - 1)
         
     return f[c]()
 
-def random_numeric_string_gen():
+def random_numeric_string_gen(symbols):
     while True:
-        yield random_numeric_string()
+        yield random_numeric_string(symbols)
         
      
 
@@ -81,18 +70,16 @@ class Generator:
     random_skew: bool = False
     random_blur: bool = False
 
-    def __init__(self, max_len: int = -1, height: int = 64, blur: float = 1, random_blur: bool = True,
-                 skew_angle: int = 0, length: int = 2, rgb: bool = False, sensitive: bool = False, aug_opts: dict = {}) -> None:
-        self.height = height
-        self.blur = blur
-        self.random_blur = random_blur
-        self.skew_angle = skew_angle
-        self.length = length
-        self.rgb = rgb
-        self.sensitive = sensitive
-        self.max_len = max_len
+    def __init__(self, opt: dict) -> None:
+        self.skew_angle = 0
+        self.rgb = False
+        self.sensitive = False
         self.image_dir = Path(__file__).parent / "trdg" / "images"
-        self.aug_opts = aug_opts
+        self.opt = AttrDict(opt)
+        self.aug_opts = dict(self.opt.augs)
+        self.height = self.opt.height
+        self.length = self.opt.length
+        self.max_len = self.opt.max_len
         
         if len(self.aug_opts) == 0:
             raise RuntimeError("aug_options are empty")
@@ -106,8 +93,8 @@ class Generator:
         self.fonts_en = load_fonts('en')
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
-        self.generator_num = GeneratorFromGenerator(random_numeric_string_gen(), fonts=self.fonts_ru, size=self.height, 
-                                                    random_blur=self.random_blur, blur=self.blur, skewing_angle=self.skew_angle, 
+        self.generator_rnd = GeneratorFromGenerator(random_numeric_string_gen(self.opt.symbols), fonts=self.fonts_ru, size=self.height, 
+                                                    skewing_angle=self.skew_angle, 
                                                     random_skew=self.random_skew,
                                                     image_dir=self.image_dir,
                                                     distorsion_type=self.distortion_type, image_mode=self.image_mode,
@@ -115,23 +102,21 @@ class Generator:
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
-        self.generator_sym = GeneratorFromRandom(count=-1, length=self.length + 2, allow_variable=True, fonts=self.fonts_all, language="ru",
-                                                use_letters=True, size=self.height, random_blur=self.random_blur, blur=self.blur, 
-                                                skewing_angle=self.skew_angle, random_skew=self.random_skew, 
-                                                distorsion_type=self.distortion_type,
-                                                image_dir=self.image_dir,
-                                                image_mode=self.image_mode,
-                                                aug_opts=self.aug_opts
-                                                )
-        
-        #self.gens = [self.generator_num, self.generator_ru, self.generator_en, self.generator_sym]
-        self.gens = [self.generator_num, self.generator_ru, self.generator_en]
-        #self.gens = [self.generator_ru]
+
+        self.gens = []
+
+        if "rnd" in self.opt.generators:
+            self.gens.append(self.generator_rnd)
+        if "en" in self.opt.generators:
+            self.gens.append(self.generator_en)
+        if "ru" in self.opt.generators:
+            self.gens.append(self.generator_ru)
+            
         pass
         
     def __create_dict_generator(self, lang: str, height: int, fonts: list[str]):
         return GeneratorFromDict(count=-1, fonts=fonts, length=self.length, language=lang, 
-                                    random_blur=self.random_blur, blur=self.blur, allow_variable=True,
+                                    allow_variable=True,
                                     skewing_angle=self.skew_angle,
                                     random_skew=self.random_skew,
                                     distorsion_type=self.distortion_type,                                
