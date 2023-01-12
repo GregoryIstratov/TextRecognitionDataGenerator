@@ -80,6 +80,12 @@ class Generator:
         self.height = self.opt.height
         self.length = self.opt.length
         self.max_len = self.opt.max_len
+        self.filter_chars = self.opt.filter_chars
+        
+        gen_symbols: str = self.opt.symbols
+        for ch in list(self.filter_chars):
+            if ch in gen_symbols:
+                gen_symbols = gen_symbols.replace(ch, '')
         
         if len(self.aug_opts) == 0:
             raise RuntimeError("aug_options are empty")
@@ -93,7 +99,7 @@ class Generator:
         self.fonts_en = load_fonts('en')
         self.fonts_all = union_fonts(self.fonts_ru, self.fonts_en)
         
-        self.generator_rnd = GeneratorFromGenerator(random_numeric_string_gen(self.opt.symbols), fonts=self.fonts_ru, size=self.height, 
+        self.generator_rnd = GeneratorFromGenerator(random_numeric_string_gen(gen_symbols), fonts=self.fonts_ru, size=self.height, 
                                                     skewing_angle=self.skew_angle, 
                                                     random_skew=self.random_skew,
                                                     image_dir=self.image_dir,
