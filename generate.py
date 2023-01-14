@@ -76,7 +76,7 @@ class Generator:
         self.sensitive = False
         self.image_dir = Path(__file__).parent / "trdg" / "images"
         self.opt = AttrDict(opt)
-        self.aug_opts = dict(self.opt.augs)
+        self.aug_opts = AttrDict(self.opt.augs)
         self.height = self.opt.height
         self.length = self.opt.length
         self.max_len = self.opt.max_len

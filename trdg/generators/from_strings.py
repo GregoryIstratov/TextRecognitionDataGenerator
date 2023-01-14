@@ -139,7 +139,8 @@ class GeneratorFromStrings:
                 self.stroke_fill,
                 self.image_mode,
                 self.output_bboxes,
-                self.aug_opts
+                dummy=-1,
+                settings=self.aug_opts,
             ),
             text
         )
