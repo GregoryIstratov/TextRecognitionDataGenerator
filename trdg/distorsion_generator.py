@@ -110,10 +110,7 @@ def apply_func_distorsion1(
     if not vertical and not horizontal:
         return image
 
-    # FIXME: From looking at the code I think both are already RGBA
-    rgb_image = image.convert("RGBA")
-
-    img_arr = np.array(rgb_image)
+    img_arr = np.array(image)
 
     vertical_offsets = [func(i) for i in range(img_arr.shape[1])]
     horizontal_offsets = [
@@ -132,7 +129,7 @@ def apply_func_distorsion1(
         (
             img_arr.shape[0] + (2 * max_offset if vertical else 0),
             img_arr.shape[1] + (2 * max_offset if horizontal else 0),
-            4,
+            2,
         )
     )
 
@@ -160,7 +157,7 @@ def apply_func_distorsion1(
 
     return Image.fromarray(
             np.uint8(new_img_arr_copy if horizontal and vertical else new_img_arr)
-        ).convert("RGBA")
+        ).convert("LA")
     
 
 

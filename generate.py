@@ -25,25 +25,133 @@ def union_fonts(a: list, b: list):
     r = [x for x in c.values()]
     return r
 
+def rand_str(chars: str, k: int):
+        return ''.join(random.choices(population=chars, k=k)).strip()
+
+def rand_num_str(k: int):
+    return rand_str('01234567789', k)
+
+def rand_ru_str(k: int):
+    return rand_str('ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ', k)
+
+def rand_en_str(k: int):
+    return rand_str(string.ascii_uppercase, k)
+
+def random_mrz():
+    numeric = '01234567890'
+    alpha = string.ascii_uppercase
+    alphanum = alpha + numeric
+    result = 'P' # P for passports
+    result = result + (rand_str(alpha, 1) if random.random() < 0.5 else '<') # additional code for P
+    result = result + rand_str(alpha + '<', 3) # country
+    result = result + rand_str(alpha + '<'*20, 39) # name
+    result = result + "\n"
+    result = result + rand_str(alphanum + '<', 9) # passport number
+    result = result + rand_str(numeric, 1) # check digit
+    result = result + rand_str(alpha + '<', 3) # nationality
+    result = result + rand_str(numeric, 6) # date of birth
+    result = result + rand_str(numeric, 1) # checker
+    result = result + rand_str('MF<', 1) # sex
+    result = result + rand_str(numeric, 6) # expire
+    result = result + rand_str(numeric, 1) # checker
+    result = result + rand_str(alphanum + '<', 14) # personal number
+    result = result + rand_str(numeric + '<', 1) # checker
+    result = result + rand_str(numeric, 1) # checker
+    
+    #assert len(result) == 89 # 88 + \n
+    #print(f"mrz len w\\n: {len(result)}")
+    return result
+
+def random_mrz2():
+    numeric = '01234567890'
+    alpha = string.ascii_uppercase
+    alphanum = alpha + numeric
+    result = rand_str(alphanum + '<'*20, 44) + '\n'
+    result = result + rand_str(alphanum + '<'*20, 44)
+    
+    #assert len(result) == 89 # 88 + \n
+    #print(f"mrz len w\\n: {len(result)}")
+    return result
+
+def random_mrz3():
+    numeric = '01234567890'
+    alpha = string.ascii_uppercase
+    alphanum = alpha + numeric
+    result = rand_str(alphanum + '<'*20, 44)
+    
+    #assert len(result) == 89 # 88 + \n
+    #print(f"mrz len w\\n: {len(result)}")
+    return result
+
+def random_mrz_generator():
+    while True:
+        yield random_mrz3()
+        
+
 def random_numeric_string(symbols):  
+    def gen_date():
+        d = random.randint(1, 31)
+        m = random.randint(1, 12)
+        y = random.randint(1900, 2100)
+        
+        s = f"{d:02d}.{m:02d}.{y:04d}"
+        
+        return s
+        
+    def gen_passnum():
+        s1 = rand_num_str(2)
+        s2 = rand_num_str(2)
+        num = rand_num_str(6)
+        
+        s = f"{s1} {s2} {num}"
+        
+        return s
+    
+    def gen_passcode():
+        s1 = rand_num_str(3)
+        s2 = rand_num_str(3)
+        
+        s = f"{s1}-{s2}"
+        
+        return s
+    
+    def gen_word_num():
+        s1 = rand_ru_str(random.randint(2, 6))
+        n = rand_num_str(random.randint(2, 6))
+        
+        return f"{s1} {n}"
+    
+    def gen_word_w_sym():
+        t1, t2 = random.choice([('"', '"'), ('(', ')')])
+        
+        s = f"{t1}"
+        w1 = rand_ru_str(random.randint(2, 6))
+        s += w1 + f"{t2} "
+        
+        s += rand_ru_str(random.randint(2, 6))
+        
+        return s
+    
+    def gen_rand_num():
+        return rand_num_str(random.randint(2, 6))
+    
+    def gen_vin():
+        return rand_str(string.ascii_uppercase + '0123456789', 17)
+    
+    def gen_nomer_symbol():
+        p = rand_num_str(random.randint(1, 3))
+        
+        return f"№{p}"
+    
     # def gen1():
-    #     d = random.randint(0, 99)
-    #     m = random.randint(0, 99)
-    #     y = random.randint(0, 9999)
-        
-    #     s = f"{d:02d}.{m:02d}.{y:04d}"
-        
-    #     return s
-        
-    def gen1():
-        return ''.join(random.choices(population=(string.ascii_uppercase*3 + '0123456789'*3 + symbols), 
-                                      k=random.randint(8,32))).strip()
+    #     return ''.join(random.choices(population=(string.ascii_uppercase*3 + '0123456789'*3 + symbols), 
+    #                                   k=random.randint(8,32))).strip()
     
-    def gen2():
-        return ''.join(random.choices(population=("ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ"*3 + '0123456789'*3 + symbols), 
-                                      k=random.randint(8,32))).strip()
+    # def gen2():
+    #     return ''.join(random.choices(population=("ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ"*3 + '0123456789'*3 + symbols), 
+    #                                   k=random.randint(8,32))).strip()
     
-    f = [gen1, gen2]
+    f = [gen_date, gen_passcode, gen_passnum, gen_word_num, gen_rand_num, gen_vin, gen_nomer_symbol, gen_word_w_sym]
     
     c = random.randint(0, len(f) - 1)
         
@@ -82,6 +190,8 @@ class Generator:
         self.max_len = self.opt.max_len
         self.filter_chars = self.opt.filter_chars
         
+        self.aug_opts.multiline = self.opt.multiline
+        
         gen_symbols: str = self.opt.symbols
         for ch in list(self.filter_chars):
             if ch in gen_symbols:
@@ -105,6 +215,12 @@ class Generator:
                                                     image_dir=self.image_dir,
                                                     distorsion_type=self.distortion_type, image_mode=self.image_mode,
                                                     aug_opts=self.aug_opts)
+        self.generator_mrz = GeneratorFromGenerator(random_mrz_generator(), fonts=self.fonts_ru, size=self.height, 
+                                                    skewing_angle=self.skew_angle, 
+                                                    random_skew=self.random_skew,
+                                                    image_dir=self.image_dir,
+                                                    distorsion_type=self.distortion_type, image_mode=self.image_mode,
+                                                    aug_opts=self.aug_opts)
 
         self.generator_ru = self.__create_dict_generator('ru', self.height, self.fonts_ru)
         self.generator_en = self.__create_dict_generator('en', self.height, self.fonts_all)
@@ -117,6 +233,8 @@ class Generator:
             self.gens.append(self.generator_en)
         if "ru" in self.opt.generators:
             self.gens.append(self.generator_ru)
+        if "mrz" in self.opt.generators:
+            self.gens.append(self.generator_mrz)
             
         pass
         
@@ -141,17 +259,20 @@ class Generator:
                 if img is None:
                     print(f"Empty image generated from gen#{c} {str(self.gens[c])}, trying again...")
                     continue
-                    
+                
+                lbl = ''.join([ch if ch not in self.opt.filter_chars else '' for ch in lbl])
+            
                 if not self.sensitive:
                     lbl = lbl.upper()
                     
                 if self.max_len != -1 and len(lbl) > self.max_len:
+                    print(f"Filtered by len({len(lbl)}) max len={self.max_len}")
                     continue
                 
                 return img, lbl
             except Exception as e:
                 #print(f"[TextGenerator] Failed to get new sample: \n{traceback.format_exc()}")
-                print(f"[TextGenerator] Failed to get new sample: {e}")
+                print(f"[TextGenerator] Failed to get new sample '{str(type(e))}': {e}")
                 
 
 

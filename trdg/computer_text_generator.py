@@ -73,22 +73,51 @@ def _compute_character_width(image_font: ImageFont, character: str) -> int:
     # Casting as int to preserve the old behavior
     return round(image_font.getlength(character))
 
+def generate_multiline_text(text: str, font_path: str, height: int, blend_factor: float = 1, margin=(5,5)):
+    lines = 1 + sum([1 if ch == '\n' else 0 for ch in text])
+    font_size = int(height / lines)
+    
+    font = ImageFont.truetype(font=font_path, size=font_size)
+
+    image = Image.new("LA", (1, 1), (0, 0))
+    draw = ImageDraw.Draw(image)
+    left, top, right, bottom = draw.multiline_textbbox((0,0), text, font=font)
+    width = left + right + margin[0] * 2
+    height = top + bottom + margin[1] * 2
+    color = (0, int(255 * blend_factor))
+    image = Image.new("LA", (width, height), (0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.multiline_text(margin, text, font=font, fill=color)
+    return image
+
+def generate_text(text: str, font_path: str, height: int, blend_factor: float = 1, margin=(3,3)):
+    font_size = height
+    
+    font = ImageFont.truetype(font=font_path, size=font_size)
+
+    image = Image.new("LA", (1, 1), (0, 0))
+    draw = ImageDraw.Draw(image)
+    left, top, right, bottom = draw.textbbox((0,0), text, font=font)
+    width = left + right + margin[0] * 2
+    height = top + bottom + margin[1] * 2
+    color = (0, int(255 * blend_factor))
+    image = Image.new("LA", (width, height), (0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.text(margin, text, font=font, fill=color)
+    return image
 
 def generate_horizontal_text1(
     text: str,
     font: str,
-    text_color: str,
+    font_color: int,
     font_size: int,
     space_width: int,
     character_spacing: int,
     word_split: bool,
     stroke_width: int = 0,
-    stroke_fill: str = "#282828",
+    blend_factor: float = 1,
 ) -> Tuple:
     
-    text_color = "#282828,#404040"
-    stroke_fill = "#282828,#404040"
-
     #print(f"Font: {font} size {font_size}")
     
     image_font = ImageFont.truetype(font=font, size=font_size)
@@ -112,47 +141,24 @@ def generate_horizontal_text1(
     if not word_split:
         text_width += character_spacing * (len(text) - 1)
 
-    text_height = 0
-    try:
-        text_height = max([get_text_height(image_font, p) for p in splitted_text])
-    except OSError as err:
-        dst_dir = "/home/greg/EasyOCR/trainer/TextRecognitionDataGenerator/trdg/fonts/invalid"
-        print(f"Bad font {font}")
-        shutil.move(font, dst_dir)
-        raise err
+    text_height = max([get_text_height(image_font, p) for p in splitted_text])
 
-    txt_img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
+    txt_img = Image.new("LA", (text_width, text_height), (0,0))
 
     txt_img_draw = ImageDraw.Draw(txt_img)
-
-    colors = [ImageColor.getrgb(c) for c in text_color.split(",")]
-    c1, c2 = colors[0], colors[-1]
-
-    fill = (
-        rnd.randint(min(c1[0], c2[0]), max(c1[0], c2[0])),
-        rnd.randint(min(c1[1], c2[1]), max(c1[1], c2[1])),
-        rnd.randint(min(c1[2], c2[2]), max(c1[2], c2[2])),
-    )
-
-    stroke_colors = [ImageColor.getrgb(c) for c in stroke_fill.split(",")]
-    stroke_c1, stroke_c2 = stroke_colors[0], stroke_colors[-1]
-
-    stroke_fill = (
-        rnd.randint(min(stroke_c1[0], stroke_c2[0]), max(stroke_c1[0], stroke_c2[0])),
-        rnd.randint(min(stroke_c1[1], stroke_c2[1]), max(stroke_c1[1], stroke_c2[1])),
-        rnd.randint(min(stroke_c1[2], stroke_c2[2]), max(stroke_c1[2], stroke_c2[2])),
-    )
+    
+    color = (font_color, int(255 * blend_factor))
 
     for i, p in enumerate(splitted_text):
         txt_img_draw.text(
             (sum(piece_widths[0:i]) + i * character_spacing * int(not word_split), 0),
             p,
-            fill=fill,
+            fill=color,
             font=image_font,
             stroke_width=stroke_width,
-            stroke_fill=stroke_fill,
+            stroke_fill=color,
         )
-    debug(f"Font: size={font_size} space_width={space_width} text_width={text_width} text_height={text_height} fill={fill} stroke_fill={stroke_fill}")
+    #debug(f"Font: size={font_size} space_width={space_width} text_width={text_width} text_height={text_height} fill={fill} stroke_fill={stroke_fill}")
 
     return txt_img
 

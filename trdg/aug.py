@@ -1,20 +1,11 @@
 import io
-import json
-import math
-import os
-import random as rnd
-import traceback
-
-from PIL import Image, ImageFilter, ImageStat, ImageEnhance
-
-from trdg import computer_text_generator, background_generator, distorsion_generator
-from trdg.utils import mask_to_bboxes, make_filename_valid, add_image_noise, apply_random_overexposure, debug, error, AttrDict
-from trdg.background_generator import MyNoise_INTER, MyNoise_CLUSTER, MyNoise_CLOUD, MyNoise_MARBLE
-
 import numpy as np
-import cv2
 import random as rnd
-from enum import Enum
+import math
+from PIL import Image, ImageFilter, ImageStat, ImageEnhance
+import cv2
+from trdg.utils import AttrDict
+from trdg import distorsion_generator
 import graphlib
 
 def randfloat(a: float, b: float) -> float:
@@ -270,6 +261,10 @@ def build_augmentation_pipeline(opt_augs: AttrDict) -> dict[str, AugmentationPip
         order = list(ts.static_order())
         return order
     
+    if not isinstance(opt_augs, AttrDict):
+        opt_augs = AttrDict(opt_augs)
+        
+    opt_augs = AttrDict(opt_augs)
     instances = build_instances(opt_augs.instances)
     order = get_build_order(opt_augs.pipelines, instances)
     
@@ -284,230 +279,3 @@ def build_augmentation_pipeline(opt_augs: AttrDict) -> dict[str, AugmentationPip
     
     return pipelines
     
-
-class FakeTextDataGenerator(object):
-    @classmethod
-    def generate_from_tuple(cls, t):
-        """
-        Same as generate, but takes all parameters as one tuple
-        """
-
-        cls.generate(*t)
-
-    @classmethod
-    def generate(
-        cls,
-        index: int,
-        text: str,
-        font: str,
-        out_dir: str,
-        size: int,
-        extension: str,
-        skewing_angle: int,
-        random_skew: bool,
-        blur: int,
-        random_blur: bool,
-        background_type: int,
-        distorsion_type: int,
-        distorsion_orientation: int,
-        is_handwritten: bool,
-        name_format: int,
-        width: int,
-        alignment: int,
-        text_color: str,
-        orientation: int,
-        space_width: int,
-        character_spacing: int,
-        margins: int,
-        fit: bool,
-        output_mask: bool,
-        word_split: bool,
-        image_dir: str,
-        stroke_width: int = 0,
-        stroke_fill: str = "#282828",
-        image_mode: str = "RGB",
-        output_bboxes: int = 0,
-        dummy: int = 0,
-        settings: dict = {},
-    ) -> Image:
-        image = None
-
-        if len(settings) == 0:
-            raise RuntimeError("Aug opts are empty")
-        
-        margin_top, margin_left, margin_bottom, margin_right = margins
-        horizontal_margin = margin_left + margin_right
-        vertical_margin = margin_top + margin_bottom
-        
-        aug_pipelines = build_augmentation_pipeline(settings)
-        
-        blend_factor = randfloat(settings.blend_factor_min, settings.blend_factor_max)
-        
-        ##########################
-        # Create picture of text #
-        ##########################
-        if settings.multiline:
-            text_image = computer_text_generator.generate_multiline_text(text, font, size, blend_factor)
-        else:
-            text_image = computer_text_generator.generate_text(text, font, size, blend_factor)
-            # text_image = computer_text_generator.generate_horizontal_text1(
-            #     text=text,
-            #     font=font,
-            #     font_color=settings.font_color,
-            #     font_size=size,
-            #     space_width=space_width,
-            #     character_spacing=character_spacing,
-            #     word_split=word_split,
-            #     stroke_width=stroke_width,
-            #     blend_factor=blend_factor
-            # )
-        # if len(text) > 50:
-        #     random_angle = rnd.randint(0 - skewing_angle // 3, skewing_angle // 3)
-        # elif len(text) > 32:
-        #     random_angle = rnd.randint(0 - skewing_angle // 2, skewing_angle // 2)
-        # else:
-        #     random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
-
-        # rotated_img = image.rotate(
-        #     skewing_angle if not random_skew else random_angle, expand=1
-        # )
-
-        # rotated_mask = mask.rotate(
-        #     skewing_angle if not random_skew else random_angle, expand=1
-        # )
-        
-        if "text" in aug_pipelines:
-            text_image = aug_pipelines["text"].apply(text_image)
-
-        ##################################
-        # Resize image to desired format #
-        ##################################
-
-        # Horizontal text
-        new_width = int(text_image.size[0] * (float(size - vertical_margin) / float(text_image.size[1])))
-        text_image = text_image.resize(
-            (new_width, size - vertical_margin), Image.Resampling.LANCZOS
-        )
-        # resized_mask = distorted_mask.resize(
-        #     (new_width, size - vertical_margin), Image.Resampling.NEAREST
-        # )
-        background_width = width if width > 0 else new_width + horizontal_margin
-        background_height = size
-   
-
-        #############################
-        # Generate background image #
-        #############################
-        def generate_backgound():
-            #c = rnd.choices(population=[0,1,2], weights=[0.45, 0.10, 0.45], k=1)[0]
-            #c = rnd.randint(0, 7)
-            w = settings.inp_weights
-            type = rnd.choices(population=["image", "noise", "plain"], weights=w, k=1)[0]
-            
-            c = -1
-            match type:
-                case "image":
-                    c = 3
-                case "noise":
-                    c = rnd.choice([0, 4, 5, 6, 7])
-                case "plain":
-                    c = 1                    
-                    
-            #c = 3
-            match c:
-                case 0:
-                    return background_generator.gaussian_noise(
-                        background_height, background_width
-                    )
-                case 1:
-                    return background_generator.plain_color(
-                        background_height, background_width
-                    )
-                case 2:
-                    return background_generator.quasicrystal(
-                        background_height, background_width
-                    )
-                case 3:                
-                    return background_generator.image(
-                        background_height, background_width, image_dir
-                    )
-                case 4:
-                    return background_generator.my_noise(background_height, background_width, MyNoise_CLUSTER(12))
-                case 5:
-                    return background_generator.my_noise(background_height, background_width, MyNoise_INTER(12))
-                case 6:
-                    return background_generator.my_noise(background_height, background_width, MyNoise_CLOUD(8, 8))
-                case 7:
-                    return background_generator.my_noise(background_height, background_width, MyNoise_MARBLE())
-                case _:
-                    raise RuntimeError("Unknown background type")
-
-
-        background_img = generate_backgound()
-
-        ##############################################################
-        # Comparing average pixel value of text and background image #
-        ##############################################################
-        # if 0:
-        #     try:
-        #         resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
-        #         background_img_st = ImageStat.Stat(background_img)
-
-        #         resized_img_px_mean = sum(resized_img_st.mean[:3]) / 3
-        #         background_img_px_mean = sum(background_img_st.mean[:3]) / 3
-        #         df = abs(resized_img_px_mean - background_img_px_mean)
-
-        #         debug(f"Avg: bg:{background_img_px_mean} font: {resized_img_px_mean} df={df} angle={random_angle} blur={text_blur_fact}")
-        #         if df < 15:
-        #             debug("value of mean pixel is too similar. Ignore this image")
-
-        #             debug("resized_img_st \n {}".format(resized_img_st.mean))
-        #             debug("background_img_st \n {}".format(background_img_st.mean))
-
-        #             return
-        #     except Exception as err:
-        #         #error(f"Exception: {str(err)}")
-        #         raise err
-
-        #############################
-        # Place text with alignment #
-        #############################
-
-        background_img.paste(text_image, (margin_left, margin_top), text_image)
-        # if alignment == 0 or width == -1:
-        #     background_img.paste(text_image, (margin_left, margin_top), text_image)
-        # elif alignment == 1:
-        #     background_img.paste(
-        #         text_image,
-        #         (int(background_width / 2 - new_text_width / 2), margin_top),
-        #         text_image,
-        #     )
-        # else:
-        #     background_img.paste(
-        #         text_image,
-        #         (background_width - new_text_width - margin_right, margin_top),
-        #         text_image,
-        #     )
-
-        final_image = background_img 
-             
-        #######################
-        # Apply augmentations #
-        #######################
-        def invert_image(img: Image):
-            return Image.fromarray(cv2.bitwise_not(np.asarray(img)))        
-
-        final_image = aug_pipelines["main"].apply(final_image)            
-                        
-        if rnd.random() < settings.invert_chance:
-            final_image = invert_image(final_image)                                
-            
-        if rnd.random() < settings.overexposure_chance:
-            n = rnd.randint(1, settings.overexposure_k)
-            for i in range(n):
-                final_image = Image.fromarray(apply_random_overexposure(np.asarray(final_image)))
-
-
-        if output_mask == 1:
-            return final_image, None
-        return final_image

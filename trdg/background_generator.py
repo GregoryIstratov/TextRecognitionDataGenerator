@@ -114,7 +114,7 @@ def my_noise(height: int, width: int, type: MyNoiseType) -> Image:
                 return image              
 
 
-    return Image.fromarray(__do_noise()).convert("RGBA")
+    return Image.fromarray(__do_noise()).convert("L")
 
 def gaussian_noise(height: int, width: int) -> Image:
     """
@@ -129,7 +129,7 @@ def gaussian_noise(height: int, width: int) -> Image:
     std = 255 - mean
     cv2.randn(image, mean, std)
 
-    return Image.fromarray(image).convert("RGBA")
+    return Image.fromarray(image).convert("L")
 
 
 def plain_color(height: int, width: int) -> Image:
@@ -139,7 +139,7 @@ def plain_color(height: int, width: int) -> Image:
     
     color = rnd.randint(100, 235)
 
-    return Image.new("L", (width, height), color).convert("RGBA")
+    return Image.new("L", (width, height), color)
 
 
 @jit
@@ -172,7 +172,7 @@ def quasicrystal(height: int, width: int) -> Image:
 
     image = __quasicrystal(height, width)
             
-    return Image.fromarray(image).convert("RGBA")
+    return Image.fromarray(image).convert("L")
 
 
 def image(height: int, width: int, image_dir: str) -> Image:
@@ -183,8 +183,8 @@ def image(height: int, width: int, image_dir: str) -> Image:
 
     if len(images) > 0:
         pic = Image.open(
-            os.path.join(image_dir, images[rnd.randint(0, len(images) - 1)])
-        )
+            os.path.join(image_dir, images[rnd.randint(0, len(images) - 1)]),
+        ).convert('L')
 
         if pic.size[0] < width:
             pic = pic.resize(
